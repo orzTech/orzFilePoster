@@ -1,0 +1,103 @@
+orzTechAbout(ParentGUIID=0)
+{
+	global
+	local Author
+	If (ParentGUIID != 0)
+	{
+		Gui, %ParentGUIID%:+Disabled
+		Gui, 99:+Owner%ParentGUIID%
+	}
+	Gui, 99:Font, s8 Bold, Tahoma
+	Gui, 99:Font, , Segoe UI
+	Gui, 99:Add,Text,+BackgroundTrans section,%ApplicationName% %ApplicationVersion%
+	Gui, 99:Font, Norm cDefault
+	Gui, 99:Add,Text,+BackgroundTrans xs+10 y+5,%ProductName% %ProductVersion% 的一部分
+	Gui, 99:Font, CBlue Underline s8
+	Gui, 99:Add,Text,+BackgroundTrans xs+10 y+5 gorzTechAboutVisitHomepage,%ProductHomepageURL%
+	Gui, 99:Font, Norm cDefault
+	Gui, 99:Font, s8 Bold
+	Gui, 99:Add,Text,+BackgroundTrans xs y+20,囧科技 | orzTech 荣誉出品
+	Gui, 99:Font, Norm cDefault
+	Loop, %Author0%
+	{
+		Author := Author . Author%A_Index% . ", "
+	}
+	Gui, 99:Add,Text,+BackgroundTrans xs+10 y+5 w400, %Author%
+	Gui, 99:Font, Norm cDefault
+	Gui, 99:Font, CBlue Underline s8
+	Gui, 99:Add,Text,+BackgroundTrans xs+10 y+5 gorzTechAboutVisitOrzTech,http://orztech.com/
+	Gui, 99:Font, Norm cDefault
+	Gui, 99:Font, s8 Bold
+	Gui, 99:Add,Text,+BackgroundTrans xs y+20,囧科技技术支持
+	Gui, 99:Font, Norm cDefault
+	Gui, 99:Font, CBlue Underline s8
+	Gui, 99:Add,Text,+BackgroundTrans xs+10 y+5 gorzTechAboutVisitSupportURL, %ProductSupportURL%
+	Gui, 99:Add,Text,+BackgroundTrans xs+10 y+5 gorzTechAboutVisitSupportEmail, %ProductSupportEmail%
+	Gui, 99:Font, Norm cDefault
+	Gui, 99:Font, s8 Bold
+	Gui, 99:Add,Text,+BackgroundTrans xs y+20,鸣谢
+	Gui, 99:Font, Norm cDefault
+	Gui, 99:Font, s8
+	Gui, 99:Add, Edit,ReadOnly xs+10 y+5 w400 R5, %Acknowledgements%
+	Gui, 99:Font, Norm cDefault
+	Gui, 99:Font, s8, Tahoma
+	Gui, 99:Show, , 关于
+	Gui, 99:+LastFound
+	
+	orzTechAboutHandCurs :=DllCall("LoadCursor","UInt",NULL,"Int",32649,"UInt") ;IDC_HAND
+	OnMessage(0x200,"orzTechAbout_WM_MOUSEMOVE")
+	WinWaitClose
+	return
+	
+	99GuiEscape:
+	99GuiClose:
+		If (ParentGUIID != 0)
+		{
+			Gui, %ParentGUIID%:-Disabled
+		}
+		
+		Gui, 99:Destroy
+		OnMessage(0x200,"")
+  		DllCall("DestroyCursor","Uint", orzTechAboutHandCurs)
+  		orzTechAboutHandCurs=
+	return
+}
+
+orzTechAbout_WM_MOUSEMOVE(wParam,lParam)
+{
+	Global orzTechAboutHandCurs
+	MouseGetPos,,,,ctrl
+	If ctrl in Static3,Static6,Static8,Static9
+		DllCall("SetCursor","UInt", orzTechAboutHandCurs)
+	Return
+}
+
+orzTechAboutVisitHomepage:
+	Run, %ProductHomepageURL%
+return
+
+orzTechAboutVisitOrzTech:
+	Run, http://orztech.com/
+return
+
+orzTechAboutVisitSupportURL:
+	Run, %ProductSupportURL%
+return
+
+orzTechAboutVisitSupportEmail:
+	Run, mailto:%ProductSupportEmail%
+return
+
+orzTechMenu:
+    Menu, orzTechMenu, Add, 访问发布页面(&P)..., orzTechAboutVisitHomepage
+    Menu, orzTechMenu, Add, 访问囧科技(&O)..., orzTechAboutVisitOrzTech
+    Menu, orzTechMenu, Add
+    Menu, orzTechMenu, Add, 访问技术支持网页(&S)..., orzTechAboutVisitSupportURL
+    Menu, orzTechMenu, Add, 发送技术支持邮件(&M)..., orzTechAboutVisitSupportEmail
+    Menu, orzTechMenu, Add
+    Menu, orzTechMenu, Add, 关于(&A)..., orzTechMenuAbout
+Return
+
+orzTechMenuAbout:
+	orzTechAbout()
+Return

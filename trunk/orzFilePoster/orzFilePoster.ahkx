@@ -1,0 +1,509 @@
+/*
+[orzTech]
+SourceType=AutoHotkeyL
+*/
+ApplicationName=orzFilePoster GUI
+ApplicationVersion=1.0.0.78
+ProductName=orzFilePoster
+ProductVersion=1.0.0.78
+ProductHomepageURL=http://orztech.com/softwares/fileposter
+ProductSupportURL=http://orztech.com/support/
+ProductSupportEmail=support+FilePoster@orztech.com
+Author0=2
+Author1=Yeechan Lu
+Author2=Hongyu Pan
+Acknowledgements=http://www.autohotkey.com/forum/topic69642.html (LV_SortArrow by Solar)`nhttp://quick.mixnmojo.com/usb-disk-ejector (USB Disk Ejector by bengorman)
+
+    Main()
+return
+#SingleInstance ignore
+#Include ..\_common\GUIAnchor.ahk
+#Include ..\_common\orzTechAbout.ahkx
+
+Main()
+{
+    Gosub Main
+}
+
+Main:
+    FileInstall, orzFilePosterCopier.exe, %A_ScriptDir%\orzFilePosterCopier.exe, 1
+    FileInstall, Eject.exe, %A_ScriptDir%\Eject.exe, 1
+    
+	FileEncoding, UTF-8-RAW
+	SetFormat, float, 0.2
+
+	Menu, Tray, NoIcon
+	Menu, Tray, NoStandard
+    If A_IsCompiled
+	    Menu, Tray, Icon, %A_ScriptFullPath%
+	Menu, Tray, Tip, %ApplicationName% %ApplicationVersion%
+	Menu, Tray, Add, 停止分发(&S), StopDistribute
+	Menu, Tray, Add, 
+	Menu, Tray, Add, 退出(&X), GuiClose
+
+	Menu, FileListBackgroundPopup, Add, 添加文件(&A)..., FileListAddFile
+	Menu, FileListBackgroundPopup, Default, 添加文件(&A)...
+	Menu, FileListBackgroundPopup, Add, 添加文件夹(&D)..., FileListAddDirectory
+	Menu, FileListBackgroundPopup, Add
+	Menu, FileListBackgroundPopup, Add, 关于(&Z)..., orzTechAbout
+
+	Menu, FileListPopup, Add, 打开(&O), FileListOpen
+	Menu, FileListPopup, Default, 打开(&O)
+	Menu, FileListPopup, Add
+	Menu, FileListPopup, Add, 删除(&D), FileListRemove
+	Menu, FileListPopup, Add, 重命名(&R), FileListRename
+	Menu, FileListPopup, Add
+	Menu, FileListPopup, Add, 属性(&P)..., FileListProperties
+
+	Gui, Font, s9 q5
+	Gui, Font, , MS Sans Serif
+	Gui, Font, , Arial
+	Gui, Font, , Verdana
+	Gui, Font, , Tahoma
+	Gui, Font, , Segoe UI
+
+	Gui, Add, Listview, -ReadOnly gFileListEvent vFileList AltSubmit hwndhFileList W600 R15, 目的路径|大小|源文件
+	Gui, Add, Button, vButtonStartDistribute gStartDistribute default section, 开始分发(&S)
+	Gui, Add, Button, vButtonFileListAddFile gFileListAddFile ys, 添加文件(&A)...
+	Gui, Add, Button, vButtonFileListAddDirectory gFileListAddDirectory ys, 添加文件夹(&D)...
+	Gui, Add, Button, vButtonFileListRemove gFileListRemove ys, 删除(&D)
+	Gui, Add, Button, vButtonorzTechAbout gorzTechAbout ys, 关于(&Z)...
+
+	LV_ModifyCol(1, "250")
+	LV_ModifyCol(2, "70 Float")
+	LV_ModifyCol(3, "250")
+
+	Gosub FileListImportFromFile
+
+	Gui, +Resize +MinSize
+	Gui, Show,, %ApplicationName% %ApplicationVersion%
+	Gui, +LastFound
+	WinGet, Gui1ID, ID
+	GroupAdd, Hotkey1, ahk_id %Gui1ID%
+Return
+
+FileListEvent:
+	If (A_GuiEvent = "ColClick")
+		LV_SortArrow(hFileList, A_EventInfo)
+	If (A_GuiEvent = "DoubleClick")
+	{
+		If (LV_GetCount("Selected") = 0)
+			Gosub FileListAddFile
+		Else
+			Gosub FileListOpen
+	}
+	If (A_GuiEvent = "e")
+	{
+		Gui, ListView, FileList
+		LV_GetText(FileList_A_Index_Text, A_EventInfo)
+		LV_GetText(FileList_A_Index_Text_3, A_EventInfo, 3)
+		SplitPath, FileList_A_Index_Text_3, OriginalFileName
+		FileList_A_Index_Text := GetCorrectDestFileName(FileList_A_Index_Text, OriginalFileName)
+		LV_Modify(A_EventInfo, "", FileList_A_Index_Text)
+		If (FileListCount(FileList_A_Index_Text) > 1)
+		{
+			FileFullName := "X:" . FileList_A_Index_Text
+			SplitPath, FileFullName, FileName, FileDirectory, FileExt, FileNameWithoutExt
+			StringReplace, FileDirectory, FileDirectory, X:, , All
+			FileNumber := 1
+			while FileListInclude(GetCorrectDestFileName(FileDirectory . "\" . GetNumberedFileName(FileNameWithoutExt, FileNumber) . "." . FileExt)) != false
+			{
+		        FileNumber := FileNumber + 1
+		    }
+		    FileList_A_Index_Text := GetCorrectDestFileName(FileDirectory . "\" . GetNumberedFileName(FileNameWithoutExt, FileNumber) . "." . FileExt)
+			LV_Modify(A_EventInfo, "", FileList_A_Index_Text)
+	    }
+	}
+Return
+
+FileListAddFile:
+	GuiControl, -Redraw, FileList
+	FileSelectFile, Files, M3
+	if Files =
+	{}
+	Else
+	{
+		Loop, parse, Files, `n
+		{
+		    If (A_Index != 1)
+		    {
+		    	FileListAdd(FilesBasePath . "\" . A_LoopField)
+		    }
+		    Else
+		    {
+		    	FilesBasePath := A_LoopField
+		    }
+		}
+	}
+	GuiControl, +Redraw, FileList
+Return
+
+FileListAddDirectory:
+	FileSelectFolder, Folder, , 6
+	if Folder =
+		Return
+	FileListAddDir(Folder)
+Return
+
+FileListAddDir(Folder)
+{
+	GuiControl, -Redraw, FileList
+	Loop, %Folder%, 2
+	{
+		DirectoryName := A_LoopFileName
+		DirectoryPath := A_LoopFileLongPath
+	}
+	If (DirectoryPath = "")
+		DirectoryPath := Folder
+	DirectoryBasePath := DirectoryName
+	Loop, %DirectoryPath%\*.*, , 1
+	{
+		If (Mod(A_Index, 100) = 0)
+			ToolTip, Found %A_Index%+ items...%A_LoopFileLongPath%
+		StringReplace, DirectoryItemBasePath, A_LoopFileDir, %DirectoryPath%, %DirectoryBasePath%\, All
+	    FileListAdd(A_LoopFileLongPath, DirectoryItemBasePath)
+	}
+	ToolTip
+	GuiControl, +Redraw, FileList
+}
+
+FileListRemove:
+	GuiControl, -Redraw, FileList
+	RowNumber = 0
+	Loop
+	{
+	    RowNumber := LV_GetNext(0)
+	    if not RowNumber
+	        break
+	    LV_Delete(RowNumber)
+	}
+	GuiControl, +Redraw, FileList
+Return
+
+FileListOpen:
+	If (LV_GetCount("Selected") > 1)
+	{
+		Gui +OwnDialogs
+		MsgBox, 307, 正在打开多个文件, 您正试图一次性打开多个文件，然而这可能会导致系统缓慢。`n`n是否继续？
+		IfMsgBox, No
+			return
+		else IfMsgBox, Cancel
+			return
+	}
+
+	RowNumber = 0
+	Loop
+	{
+	    RowNumber := LV_GetNext(RowNumber)
+	    if not RowNumber
+	        break
+	    LV_GetText(SourceName, RowNumber, 3)
+
+		Run, "%SourceName%", , UseErrorLevel
+	    if ErrorLevel
+	    {
+	    	Gui +OwnDialogs
+    		MsgBox 48, %SourceName%, 无法为“%SourceName%”执行指定的操作。
+    	}
+	}
+Return
+
+FileListRename:
+	GuiControl, Focus, FileList
+	Send {F2}
+Return
+
+FileListProperties:
+	If (LV_GetCount("Selected") > 1)
+	{
+		Gui +OwnDialogs
+		MsgBox, 307, 正在打开多个文件, 您正试图一次性打开多个文件，然而这可能会导致系统缓慢。`n`n是否继续？
+		IfMsgBox, No
+			return
+		else IfMsgBox, Cancel
+			return
+	}
+
+	RowNumber = 0
+	Loop
+	{
+	    RowNumber := LV_GetNext(RowNumber)
+	    if not RowNumber
+	        break
+	    LV_GetText(SourceName, RowNumber, 3)
+	    Run, properties "%SourceName%", , UseErrorLevel
+	    if ErrorLevel
+	    {
+	    	Gui +OwnDialogs
+    		MsgBox 48, %SourceName%, 无法为“%SourceName%”执行指定的操作。
+    	}
+	}
+Return
+
+FileListAdd(FileFullName, BasePath = "\")
+{
+	IfNotExist, %FileFullName%
+
+		Return
+
+	StringReplace, FileFullName, FileFullName, \\, \, All
+
+	Loop %FileFullName%
+		FileFullName = %A_LoopFileLongPath%
+	SplitPath, FileFullName, FileName, FileDirectory, FileExt, FileNameWithoutExt, FileDrive
+	FileGetSize, FileSize, %FileFullName%, 
+	SetFormat, float, 0.2
+	FileSizeMB := FileSize / 1024
+	DestFileName := FileNameWithoutExt
+	FileNumber := 1
+	while FileListInclude(GetCorrectDestFileName(BasePath . "\" . GetNumberedFileName(DestFileName, FileNumber) . "." . FileExt)) != false
+    {
+        FileNumber := FileNumber + 1
+    }
+    LV_Add("", GetCorrectDestFileName(BasePath . "\\\\" . GetNumberedFileName(DestFileName, FileNumber) . "." . FileExt), FileSizeMB . " kb", FileFullName)
+}
+
+GetCorrectDestFileName(DestFileName, OriginalFileName = "file.ext")
+{
+	DestFileName := DestFileName . "\"
+	while RegExMatch(DestFileName, "\\\.{1,}\\") != 0
+	{
+		DestFileName := RegExReplace(DestFileName, "\\[^\\]{1,}\\\.{3,}", "\\$1")
+		DestFileName := RegExReplace(DestFileName, "\\[^\\]{1,}\\\.\.", "")
+		DestFileName := RegExReplace(DestFileName, "\\([^\\]{1,})\\\.", "\\$1")
+		DestFileName := RegExReplace(DestFileName, "^(\\\.{1,}){1,}\\", "\")
+	}
+	DestFileName := RegExReplace(DestFileName, "\\{2,}", "\")
+	If (SubStr(DestFileName, 0, 1) == "\")
+		DestFileName := SubStr(DestFileName, 1, -1)
+	If (SubStr(DestFileName, 1, 1) != "\")
+		DestFileName := "\" . DestFileName
+	If (DestFileName = "\")
+		DestFileName := "\" . OriginalFileName
+	DestFileName := RegExReplace(DestFileName, "\.{1,}$", "")
+	Return DestFileName
+}
+
+GetNumberedFileName(DestFileName, FileNumber)
+{
+	If (FileNumber = 1)
+		Return DestFileName
+	Else
+		Return DestFileName . " (" . FileNumber . ")"
+}
+
+FileListInclude(DestFileName) {
+	DestFileName := DestFileName
+	StringLower, DestFileName, DestFileName
+	Gui, ListView, FileList
+	Loop % LV_GetCount()
+	{
+	    LV_GetText(Text, A_Index)
+	    StringLower, Text, Text
+	    If (Text = DestFileName)
+	    	return A_Index
+	}
+	return false
+}
+
+FileListCount(DestFileName) {
+	CountNumber = 0
+	StringLower, DestFileName, DestFileName
+	Gui, ListView, FileList
+	Loop % LV_GetCount()
+	{
+	    LV_GetText(Text, A_Index)
+	    StringLower, Text, Text
+	    If (Text == DestFileName)
+	    	CountNumber := CountNumber + 1
+	}
+	return CountNumber
+}
+
+GuiContextMenu:
+	if A_GuiControl <> FileList
+    	return
+    If (LV_GetCount("Selected") = 0)
+    	Menu, FileListBackgroundPopup, Show, %A_GuiX%, %A_GuiY%
+    Else
+		Menu, FileListPopup, Show, %A_GuiX%, %A_GuiY%
+return
+
+GuiDropFiles:
+	Loop, parse, A_GuiEvent, `n
+	{
+		If (InStr(FileExist(A_LoopField), "D"))
+			FileListAddDir(A_LoopField)
+		Else
+			FileListAdd(A_LoopField)
+	}
+Return
+
+GuiClose:
+GuiEscape:
+	Gosub FileListExportToFile
+	ExitApp
+Return
+
+GuiSize:
+	Anchor("FileList", "wh")
+	Anchor("ButtonStartDistribute", "y")
+	Anchor("ButtonFileListAddFile", "y")
+	Anchor("ButtonFileListAddDirectory", "y")
+	Anchor("ButtonFileListRemove", "y")
+	Anchor("ButtonorzTechAbout", "y")
+Return
+
+; LV_SortArrow by Solar. http://www.autohotkey.com/forum/viewtopic.php?t=69642
+; h = ListView handle
+; c = 1 based index of the column
+; d = Direction to set the arrow. "asc" or "up". "desc" or "down".
+LV_SortArrow(h, c, d="")
+{
+   static uPtr, ptrSize, lvColumn, LVM_GETCOLUMN, LVM_SETCOLUMN
+   If (!uPtr) {
+      uPtr := A_PtrSize ? "uptr" : "uint", PtrSize := A_PtrSize ? A_PtrSize : 4, LVM_GETCOLUMN := A_IsUnicode ? 4191 : 4121, LVM_SETCOLUMN := A_IsUnicode ? 4192 : 4122
+      VarSetCapacity(lvColumn, PtrSize + 4)
+      NumPut(1, lvColumn) ; mask
+   }
+   c -= 1 ; convert to 0 based index
+   DllCall("SendMessage", uPtr, h, uPtr, LVM_GETCOLUMN, uPtr, c, uPtr, &lvColumn)
+   If ((fmt := NumGet(lvColumn, 4, "int")) & 1024) { ; if up arrow is set
+      If (d && d = "asc" || d = "up")
+         Return ; up arrow already set
+      NumPut(fmt & ~1024 | 512, lvColumn, 4, "int") ; fmt
+   }
+   Else If (fmt & 512) { ; if down arrow is set
+      If (d && d = "desc" || d = "down")
+         Return ; down arrow already set
+      NumPut(fmt & ~512 | 1024, lvColumn, 4, "int") ; fmt
+   }
+   Else { ; no arrow set. check other columns and remove arrow before setting up arrow
+      hdrH := DllCall("SendMessage", uPtr, h, uPtr, 4127) ; LVM_GETHEADER
+      Loop % DllCall("SendMessage", uPtr, hdrH, uPtr, 4608) { ; HDM_GETITEMCOUNT
+         If ((i := A_Index - 1) = c) ; skip the column that we already checked
+            Continue
+         DllCall("SendMessage", uPtr, h, uPtr, LVM_GETCOLUMN, uPtr, i, uPtr, &lvColumn)
+         NumPut(NumGet(lvColumn, 4, "int") & ~1536, lvColumn, 4, "int") ; fmt
+         DllCall("SendMessage", uPtr, h, uPtr, LVM_SETCOLUMN, uPtr, i, uPtr, &lvColumn)
+      }
+      NumPut(fmt | ((d && d = "desc" || d = "down") ? 512 : 1024), lvColumn, 4, "int") ; fmt
+   }
+   Return DllCall("SendMessage", uPtr, h, uPtr, LVM_SETCOLUMN, uPtr, c, uPtr, &lvColumn)
+}
+
+StartDistribute:
+	Gui, Submit
+	Menu, Tray, Icon
+	Gosub FileListExportToFile
+	Goto WaitForNewDrive
+Return
+
+StopDistribute:
+	ExitWaitForNewDrive := true
+	Menu, Tray, NoIcon
+	Gui, Show
+Return
+
+FileListImportFromFile:
+	ExportedFileName = orzFilePoster.lst
+	Loop, read, %ExportedFileName%
+	{
+	    StringSplit, ImportFileName, A_LoopReadLine, %A_Tab%
+	    SourceFileName = %ImportFileName1%
+	    DestFileName = %ImportFileName2%
+
+		IfExist, %SourceFileName%
+		{
+		    If (FileListCount(GetCorrectDestFileName(DestFileName)) > 1)
+			{
+				FileFullName := "X:" . DestFileName
+				SplitPath, FileFullName, FileName, FileDirectory, FileExt, FileNameWithoutExt
+				StringReplace, FileDirectory, FileDirectory, X:, , All
+				FileNumber := 1
+				while FileListInclude(GetCorrectDestFileName(FileDirectory . "\" . GetNumberedFileName(FileNameWithoutExt, FileNumber) . "." . FileExt)) != false
+				{
+			        FileNumber := FileNumber + 1
+			    }
+			    DestFileName := GetCorrectDestFileName(FileDirectory . "\" . GetNumberedFileName(FileNameWithoutExt, FileNumber) . "." . FileExt)
+		    }
+		    FileGetSize, FileSize, %SourceFileName%, 
+			SetFormat, float, 0.2
+			FileSizeMB := FileSize / 1024
+
+			Loop %SourceFileName%
+				SourceFileName = %A_LoopFileLongPath%
+
+		    LV_Add("", DestFileName, FileSizeMB . " kb", SourceFileName)
+	    }
+	}
+Return
+
+FileListExportToFile:
+	ExportedFileName = orzFilePoster.lst
+	IfExist, %ExportedFileName%
+		FileDelete, %ExportedFileName%
+
+	Gui, ListView, FileList
+	Loop % LV_GetCount()
+	{
+		LV_GetText(SourceName, A_Index, 3)
+	    LV_GetText(DestName, A_Index)
+	    FileAppend, %SourceName%`t%DestName%`n, %ExportedFileName%
+	}
+Return
+
+WaitForNewDrive:
+	DriveGet, ListOld, list
+	Loop
+	{
+		Sleep, 1000
+		if (ExitWaitForNewDrive = true)
+		{
+			ExitWaitForNewDrive := false
+			Break
+		}
+		DriveGet, ListNew, List
+		if StrLen(ListNew) > StrLen(ListOld)
+		{
+			Loop, Parse, ListNew
+			{
+				StrNum := InStr(ListOld, A_LoopField)
+				If StrNum = 0
+				{
+					DriveGet, DriveType, Type, %A_LoopField%:
+					If (DriveType != "CDROM")
+					{
+						DriveGet, DriveLabel, Label, %A_LoopField%:
+						DriveGet, DriveCapacity, capacity, %A_LoopField%:
+						DriveSpaceFree, DriveFree, %A_LoopField%:
+						DrivePercent := DriveFree / DriveCapacity * 100
+						TrayTip, %A_LoopField%: [%DriveLabel%] 已插入, 可用空间: %DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb)`n`n即将开始文件分发。
+						Sleep, 2000
+						Run, orzFilePosterCopier.exe orzFilePoster.lst %A_LoopField%
+					}
+				}
+			}
+			ListOld := ListNew
+		}
+		Else If StrLen(ListOld) > StrLen(ListNew)
+		{
+			ListOld := ListNew
+		}
+	}
+Return
+
+orzTechAbout:
+	orzTechAbout(1)
+Return
+
+#IfWinActive, ahk_group Hotkey1
+Delete::
+	GuiControl, Focus, FileList
+	Gosub FileListRemove
+return
+
+^A::
+	GuiControl, Focus, FileList
+	LV_Modify(0, "Select")
+return

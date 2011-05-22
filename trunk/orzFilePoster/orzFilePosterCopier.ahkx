@@ -1,0 +1,60 @@
+#SingleInstance off
+#NoTrayIcon
+
+Main:
+	FileEncoding, UTF-8-RAW
+	SetFormat, float, 0.2
+	
+	If 0<>2
+		ExitApp
+	
+	FileSizeCount = 0
+	FileSizeCount2 = 0
+	FileCount = 0
+	FileCount2 = 0
+	Loop, read, %1%
+	{
+	    StringSplit, ImportFileName, A_LoopReadLine, %A_Tab%
+		FileGetSize, FileSize, %ImportFileName1%
+		
+		FileSizeCount := FileSizeCount + FileSize
+		FileCount := FileCount + 1
+	}
+	
+	DriveGet, DriveLabel, Label, %2%:
+	DriveGet, DriveCapacity, capacity, %2%:
+	DriveSpaceFree, DriveFree, %2%:
+	DrivePercent := DriveFree / DriveCapacity * 100
+	Progress, A T M1 FM12 FS9 0, 0`% - 0/%FileCount%, %2%: [%DriveLabel%]`n%DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb),文件分发 %2%: [%DriveLabel%],Segoe UI
+	
+	Loop, read, %1%
+	{
+	    StringSplit, ImportFileName, A_LoopReadLine, %A_Tab%
+		FileGetSize, FileSize, %ImportFileName1%
+		DestFile = %2%:%ImportFileName2%
+		
+		SplitPath, DestFile, DestName, DestDir
+		
+		FileCreateDir, %DestDir%
+		FileCopy, %ImportFileName1%, %DestFile%
+		
+		FileSizeCount2 := FileSizeCount2 + FileSize
+		FileCount2 := FileCount2 + 1
+		
+		DriveSpaceFree, DriveFree, %2%:
+		DrivePercent := DriveFree / DriveCapacity * 100
+		Progress, % (FileSizeCount2 / FileSizeCount * 100), % (FileSizeCount2 / FileSizeCount * 100) . "% - " . FileCount2 . "/" . FileCount . " " . DestName, %2%: [%DriveLabel%]`n%DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb)
+	}
+	Progress, Off
+	
+	Run, eject.exe /REMOVELETTER %2%
+	Sleep 1000
+	IfWinExist, eject.exe
+	{
+		WinClose
+	    MsgBox 16,, %2%: [%DriveLabel%] %DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb) 移除失败，请检查。
+	}
+	Else
+	{
+		MsgBox 64,, 请移除 %2%: [%DriveLabel%] %DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb)。
+	}
