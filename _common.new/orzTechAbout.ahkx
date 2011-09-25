@@ -1,0 +1,113 @@
+orzTechAbout(ParentGUIID=0)
+{
+	global
+	local Author, Text
+	GUIID := orzTechGUI("A")
+    If (GUIID == 0)
+        Return
+	If (ParentGUIID != 0)
+	{
+		Gui, %ParentGUIID%:+Disabled
+		Gui, %GUIID%:+Owner%ParentGUIID%
+	}
+    Gui, %GUIID%:+LabelAboutGUI
+	Gui, %GUIID%:Font, s8 Bold, Tahoma
+	Gui, %GUIID%:Font, , Segoe UI
+	Gui, %GUIID%:Add,Text,+BackgroundTrans section,%ApplicationName% %ApplicationVersion%
+	Gui, %GUIID%:Font, Norm cDefault
+	Gui, %GUIID%:Add,Text,+BackgroundTrans xs+10 y+5, % $("PartOf", "orzTechAbout", ProductName . " " . ProductVersion)
+	Gui, %GUIID%:Font, CBlue Underline s8
+	Gui, %GUIID%:Add,Text,+BackgroundTrans xs+10 y+5 gorzTechAboutVisitHomepage,%ProductHomepageURL%
+	Gui, %GUIID%:Font, Norm cDefault
+	Gui, %GUIID%:Font, s8 Bold
+	Gui, %GUIID%:Add,Text,+BackgroundTrans xs y+20,% $("PoweredBy", "orzTechAbout")
+	Gui, %GUIID%:Font, Norm cDefault
+	Loop, %Author0%
+	{
+		Author := Author . Author%A_Index% . ", "
+	}
+	Gui, %GUIID%:Add,Text,+BackgroundTrans xs+10 y+5 w400, %Author%
+	Gui, %GUIID%:Font, Norm cDefault
+	Gui, %GUIID%:Font, CBlue Underline s8
+	Gui, %GUIID%:Add,Text,+BackgroundTrans xs+10 y+5 gorzTechAboutVisitOrzTech,http://orztech.com/
+	Gui, %GUIID%:Font, Norm cDefault
+	Gui, %GUIID%:Font, s8 Bold
+	Gui, %GUIID%:Add,Text,+BackgroundTrans xs y+20,% $("Support", "orzTechAbout")
+	Gui, %GUIID%:Font, Norm cDefault
+	Gui, %GUIID%:Font, CBlue Underline s8
+	Gui, %GUIID%:Add,Text,+BackgroundTrans xs+10 y+5 gorzTechAboutVisitSupportURL, %ProductSupportURL%
+	Gui, %GUIID%:Add,Text,+BackgroundTrans xs+10 y+5 gorzTechAboutVisitSupportEmail, %ProductSupportEmail%
+	Gui, %GUIID%:Font, Norm cDefault
+	Gui, %GUIID%:Font, s8 Bold
+	Gui, %GUIID%:Add,Text,+BackgroundTrans xs y+20,% $("Acknowledgements", "orzTechAbout")
+	Gui, %GUIID%:Font, Norm cDefault
+	Gui, %GUIID%:Font, s8
+	Gui, %GUIID%:Add, Edit,ReadOnly xs+10 y+5 w400 R5, %Acknowledgements%
+	Gui, %GUIID%:Font, Norm cDefault
+	Gui, %GUIID%:Font, s8, Tahoma
+	Gui, %GUIID%:Show, , % $("About", "orzTechAbout", ProductName . " " . ProductVersion)
+	Gui, %GUIID%:+LastFound
+	WinGet, orzTechAboutGUIhwnd, ID
+	orzTechAboutHandCurs :=DllCall("LoadCursor","UInt",NULL,"Int",32649,"UInt") ;IDC_HAND
+	OnMessage(0x200,"orzTechAbout_WM_MOUSEMOVE")
+	WinWaitClose
+	return
+	
+	AboutGUIEscape:
+	AboutGUIClose:
+		If (ParentGUIID != 0)
+		{
+			Gui, %ParentGUIID%:-Disabled
+		}
+		
+		Gui, %GUIID%:Destroy
+        orzTechAboutGUIhwnd := 0
+		OnMessage(0x200,"")
+  		DllCall("DestroyCursor","Uint", orzTechAboutHandCurs)
+  		orzTechAboutHandCurs=
+	return
+}
+
+orzTechAbout_WM_MOUSEMOVE(wParam,lParam)
+{
+	Global orzTechAboutHandCurs
+	MouseGetPos,,,,ctrl
+	If ctrl in Static3,Static6,Static8,Static9
+		DllCall("SetCursor","UInt", orzTechAboutHandCurs)
+	Return
+}
+
+orzTechAboutVisitHomepage:
+	Run, %ProductHomepageURL%
+return
+
+orzTechAboutVisitOrzTech:
+	Run, http://orztech.com/
+return
+
+orzTechAboutVisitSupportURL:
+	Run, %ProductSupportURL%
+return
+
+orzTechAboutVisitSupportEmail:
+	Run, mailto:%ProductSupportEmail%
+return
+
+orzTechMenu:
+    Menu, orzTechMenu, Add, % $("orzTechAboutVisitHomepage", "orzTechAbout"), orzTechAboutVisitHomepage
+    Menu, orzTechMenu, Add, % $("orzTechAboutVisitOrzTech", "orzTechAbout"), orzTechAboutVisitOrzTech
+    Menu, orzTechMenu, Add
+    Menu, orzTechMenu, Add, % $("orzTechAboutVisitSupportURL", "orzTechAbout"), orzTechAboutVisitSupportURL
+    Menu, orzTechMenu, Add, % $("orzTechAboutVisitSupportEmail", "orzTechAbout"), orzTechAboutVisitSupportEmail
+    Menu, orzTechMenu, Add
+    Menu, orzTechMenu, Add, % $("orzTechMenuAbout", "orzTechAbout"), orzTechMenuAbout
+Return
+
+orzTechMenuAbout:
+    If orzTechAboutGUIhwnd=
+        orzTechAboutGUIhwnd := 0
+    If orzTechAboutGUIhwnd != 0
+        WinActivate, ahk_id %orzTechAboutGUIhwnd%
+    Else
+	    orzTechAbout()
+Return

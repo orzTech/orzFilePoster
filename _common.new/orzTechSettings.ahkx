@@ -1,0 +1,203 @@
+orzTechSettings(ParentGUIID=0)
+{
+	global
+    local GroupName, KeyName, SettingGroup, SettingValue, TypeName, GUIID
+    GUIID := orzTechGUI("A")
+    If (GUIID == 0)
+        Return
+	If (ParentGUIID != 0)
+	{
+		Gui, %ParentGUIID%:+Disabled
+		Gui, %GUIID%:+Owner%ParentGUIID%
+	}
+    Gui, %GUIID%:Default
+    Gui, %GUIID%:+LabelSettingsGUI
+	Gui, %GUIID%:Font, s8, Tahoma
+	Gui, %GUIID%:Font, , Segoe UI
+    Gui, %GUIID%:Add, ListView, +BackgroundDefault +Report -Multi +NoSortHdr +LV0x20 r20 w700 vSettingsView AltSubmit gSettingsGUIListViewEvents, % $("ListViewHeaderFriendlyName", "orzTechSettings") "|" $("ListViewHeaderName", "orzTechSettings") "|" $("ListViewHeaderDataType", "orzTechSettings") "|" $("ListViewHeaderValue", "orzTechSettings")
+
+    Gui, %GUIID%:Add, Button, Default Hidden gSettingsGUIListViewEnter xp yp wp hp, OK
+    Gosub SettingsGUIRefreshSettings
+    LV_ModifyCol(1, "AutoHdr")
+    LV_ModifyCol(2, 0)
+    LV_ModifyCol(3, 0)
+    LV_ModifyCol(4, "AutoHdr")
+    
+    Gui, %GUIID%:Add, Button, vButtonImport gSettingsGUIButtonImport section, % $("ButtonImport", "orzTechSettings")
+    Gui, %GUIID%:Add, Button, vButtonExport gSettingsGUIButtonExport ys, % $("ButtonExport", "orzTechSettings")
+    Gui, %GUIID%:Add, Button, vButtonReset gSettingsGUIButtonReset ys, % $("ButtonReset", "orzTechSettings")
+    Gui, %GUIID%:Add, Button, vButtonClose gSettingsGUIButtonClose ys, % $("ButtonClose", "orzTechSettings")
+    Gui, %GUIID%:+Resize
+	Gui, %GUIID%:Show, , % $("WindowCaption", "orzTechSettings", ProductName . " " . ProductVersion)
+	Gui, %GUIID%:+LastFound
+    WinGet, orzTechSettingsGUIhwnd, ID
+    orzTechSettingsGUIID := GUIID
+    WinWaitClose
+	return
+	
+	SettingsGUISize:
+    	orzTechGUIAnchor("SettingsView", "wh")
+    	orzTechGUIAnchor("ButtonImport", "y")
+    	orzTechGUIAnchor("ButtonExport", "y")
+    	orzTechGUIAnchor("ButtonReset", "y")
+    	orzTechGUIAnchor("ButtonClose", "y")
+        LV_ModifyCol(1, "AutoHdr")
+        LV_ModifyCol(2, 0)
+        LV_ModifyCol(3, 0)
+        LV_ModifyCol(4, "AutoHdr")
+    Return
+	
+	SettingsGUIButtonReset:
+        Loop, %Setting0%
+        {
+            SettingValue := "Settings" . StringListItem(Setting%A_Index%, 1) . StringListItem(Setting%A_Index%, 2)
+            %SettingValue% := $(SettingValue . "Default", InnerName)
+        }
+        Gosub SettingsGUIRefreshSettings
+    return
+    
+	SettingsGUIButtonImport:
+	SettingsGUIButtonExport:
+    return
+    
+    SettingsGUIButtonClose:
+	SettingsGUIEscape:
+	SettingsGUIClose:
+		If (ParentGUIID != 0)
+		{
+			Gui, %ParentGUIID%:-Disabled
+		}
+		
+        Gui, 1:Default
+		Gui, %GUIID%:Destroy
+        orzTechSettingsGUIhwnd := 0
+        orzTechGUI("F", GUIID)
+	return
+    
+    SettingsGUIListViewEnter:
+        GuiControlGet, FocusedControl, FocusV
+        if FocusedControl <> SettingsView
+            return
+        Gosub SettingsGUIExecuteSelectedItem
+    return
+    
+    SettingsGUIListViewEvents:
+        if A_GuiEvent = DoubleClick
+            if A_EventInfo <> 0
+                Gosub SettingsGUIExecuteSelectedItem
+        if A_GuiEvent = K
+            if (A_EventInfo == 113) or (A_EventInfo == 32)
+                Gosub SettingsGUIExecuteSelectedItem
+    return
+    
+    SettingsGUIExecuteSelectedItem:
+        If (LV_GetNext(0) == 0)
+            Return
+        LV_GetText(GroupName, LV_GetNext(0), 2)
+        LV_GetText(TypeName, LV_GetNext(0), 3)
+        KeyName := StringListItem(GroupName, 2, ".")
+        GroupName := StringListItem(GroupName, 1, ".")
+        If (KeyName != "")
+        {
+            SettingValue := "Settings" . GroupName . KeyName
+            %SettingValue% := orzTechSettingsEditItem(KeyName, GroupName, TypeName, %SettingValue%)
+            LV_Modify(LV_GetNext(0), "Col4", orzTechSettingsFormatItem(TypeName, %SettingValue%))
+        }
+    return
+    
+    SettingsGUIRefreshSettings:
+    LV_Delete()
+    Loop, %SettingGroup0%
+    {
+        SettingGroup := SettingGroup%A_Index%
+        LV_Add("", $("Settings" . SettingGroup, InnerName), SettingGroup)
+        Loop, %Setting0%
+        {
+            If (StringListItem(Setting%A_Index%, 1) == SettingGroup)
+            {
+                SettingValue := "Settings" . SettingGroup . StringListItem(Setting%A_Index%, 2)
+                SettingValue := %SettingValue%
+                LV_Add("", "      " . $("Settings" . SettingGroup . StringListItem(Setting%A_Index%, 2), InnerName), SettingGroup . "." . StringListItem(Setting%A_Index%, 2), StringListItem(Setting%A_Index%, 3), orzTechSettingsFormatItem(StringListItem(Setting%A_Index%, 3), SettingValue))
+            }
+        }
+    }
+    Return
+}
+
+orzTechSettingsFormatItem(TypeName, Value)
+{
+    If (TypeName == "Boolean")
+    {
+        Return Value == 1 ? "true" : "false"
+    }
+    return Value
+}
+
+orzTechSettingsEditItem(KeyName, GroupName, TypeName, OrigValue)
+{
+    global InnerName, ProductName, ProductVersion, orzTechSettingsGUIID
+    WindowTitle := $("WindowCaption", "orzTechSettings", ProductName . " " . ProductVersion)
+    WindowText := $("Settings" . GroupName . KeyName, InnerName)
+    TypeFunction := "orzTechSettingsEditor_" . StringListItem(TypeName, 1, ",")
+    if IsFunc(TypeFunction)
+    {
+        params := Object()
+        Loop, parse, TypeName, `,
+        {
+            If (A_Index >= 2)
+                params.Insert(A_LoopField)
+        }
+        return %TypeFunction%(orzTechSettingsGUIID, WindowTitle, WindowText, OrigValue, params*)
+    }
+    Gui +OwnDialogs
+    InputBox, Result, % WindowTitle, % WindowText, , , , , , , , % OrigValue
+    if ErrorLevel
+        Return OrigValue
+    else
+        Return Result
+}
+
+orzTechSettingsEditor_Boolean(ParentGUIID, WindowTitle, WindowText, OrigValue)
+{
+    If (OrigValue == 1)
+        Return 0
+    Else
+        Return 1
+}
+
+orzTechSettingsEditor_Integer(ParentGUIID, WindowTitle, WindowText, OrigValue, MinValue, MaxValue)
+{
+    return orzTechGUIInputboxInteger(ParentGUIID, WindowTitle, WindowText, OrigValue, MinValue, MaxValue)
+}
+
+orzTechSettingsLoad()
+{
+    global
+    local item
+    Loop, %Setting0%
+    {
+        item := "Settings" . StringListItem(Setting%A_Index%, 1) . StringListItem(Setting%A_Index%, 2)
+        IniRead, %item%, %A_ScriptFullPath%.settings, % StringListItem(Setting%A_Index%, 1), % StringListItem(Setting%A_Index%, 2), % $("Settings" . StringListItem(Setting%A_Index%, 1) . StringListItem(Setting%A_Index%, 2) . "Default", InnerName)
+    }
+}
+
+orzTechSettingsSave()
+{
+    global
+    local item
+    Loop, %Setting0%
+    {
+        item := "Settings" . StringListItem(Setting%A_Index%, 1) . StringListItem(Setting%A_Index%, 2)
+        item := %item%
+        IniWrite, %item%, %A_ScriptFullPath%.settings, % StringListItem(Setting%A_Index%, 1), % StringListItem(Setting%A_Index%, 2)
+    }
+}
+
+orzTechSettingsMenu:
+    If orzTechSettingsGUIhwnd=
+        orzTechSettingsGUIhwnd := 0
+    If orzTechSettingsGUIhwnd != 0
+        WinActivate, ahk_id %orzTechSettingsGUIhwnd%
+    Else
+	    orzTechSettings()
+Return

@@ -1,0 +1,7 @@
+StringListItem(List, Index, Sep = "|")
+{
+    SearchList := Sep . List . Sep
+    StartingPos := InStr(SearchList, Sep, false, 1, Index) + 1
+    Length := InStr(SearchList, Sep, false, 1, Index + 1) - StartingPos
+    Return SubStr(SearchList, StartingPos, Length)
+}
