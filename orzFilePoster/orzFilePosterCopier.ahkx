@@ -1,6 +1,7 @@
 #SingleInstance off
 #NoTrayIcon
 
+;todo: 全部文件都没有更新时，弹出计时提示
 Main:
 	FileEncoding, UTF-8-RAW
 	SetFormat, float, 0.2
@@ -24,6 +25,14 @@ Main:
 	DriveGet, DriveLabel, Label, %2%:
 	DriveGet, DriveCapacity, capacity, %2%:
 	DriveSpaceFree, DriveFree, %2%:
+	
+	;todo: 磁盘空间不够时，判断
+	;DriveFree = 0
+	If(DriveFree < FileSizeCount)
+	{
+		MsgBox, 16, %DriveLabel% (%2%:), 磁盘空间不够，请检查。
+		Return
+	}
 	DrivePercent := DriveFree / DriveCapacity * 100
 	Progress, A T M1 FM12 FS9 0, 0`% - 0/%FileCount%, %2%: [%DriveLabel%]`n%DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb),文件分发 %2%: [%DriveLabel%],Segoe UI
 	
@@ -52,9 +61,9 @@ Main:
 	IfWinExist, eject.exe
 	{
 		WinClose
-	    MsgBox 16,, %2%: [%DriveLabel%] %DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb) 移除失败，请检查。
+	    MsgBox 16,, %DriveLabel% (%2%:) %DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb) 移除失败，请检查。
 	}
 	Else
 	{
-		MsgBox 64,, 请移除 %2%: [%DriveLabel%] %DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb)。
+		MsgBox 64,, 请移除 %DriveLabel% (%2%:) %DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb)。
 	}

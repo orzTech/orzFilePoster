@@ -2,17 +2,18 @@
 [orzTech]
 SourceType=AutoHotkeyL
 */
+;Temp Password: sifcjsdijfvuisdnofvmdsofmo
 ApplicationName=orzFilePoster GUI
-ApplicationVersion=1.0.0.78
+ApplicationVersion=1.0.0.79
 ProductName=orzFilePoster
-ProductVersion=1.0.0.78
+ProductVersion=1.0.0.79
 ProductHomepageURL=http://orztech.com/softwares/fileposter
 ProductSupportURL=http://orztech.com/support/
 ProductSupportEmail=support+FilePoster@orztech.com
 Author0=2
 Author1=Yeechan Lu
 Author2=Hongyu Pan
-Acknowledgements=http://www.autohotkey.com/forum/topic69642.html (LV_SortArrow by Solar)`nhttp://quick.mixnmojo.com/usb-disk-ejector (USB Disk Ejector by bengorman)
+Acknowledgements=http://www.autohotkey.com/forum/topic69642.html (LV_SortArrow by Solar)`nhttp://quick.mixnmojo.com/usb-disk-ejector (USB Disk Ejector by bengorman)`nhttp://www.autohotkey.com/forum/topic43122.html (autoByteFormat by animeaime)
 
     Main()
 return
@@ -38,6 +39,8 @@ Main:
 	    Menu, Tray, Icon, %A_ScriptFullPath%
 	Menu, Tray, Tip, %ApplicationName% %ApplicationVersion%
 	Menu, Tray, Add, 停止分发(&S), StopDistribute
+	;change: 增加在右键菜单直接打开 eject.exe 的选项
+	Menu, Tray, Add, 快速弹出U盘(&E), RunEjectAppGUI
 	Menu, Tray, Add, 
 	Menu, Tray, Add, 退出(&X), GuiClose
 
@@ -47,13 +50,15 @@ Main:
 	Menu, FileListBackgroundPopup, Add
 	Menu, FileListBackgroundPopup, Add, 关于(&Z)..., orzTechAbout
 
+	;change: 打开文件所在文件夹
 	Menu, FileListPopup, Add, 打开(&O), FileListOpen
 	Menu, FileListPopup, Default, 打开(&O)
+	Menu, FileListPopup, Add, 打开所在文件夹(&F), FileListOpenFolder
 	Menu, FileListPopup, Add
-	Menu, FileListPopup, Add, 删除(&D), FileListRemove
-	Menu, FileListPopup, Add, 重命名(&R), FileListRename
+	Menu, FileListPopup, Add, 移除(&D), FileListRemove
+	Menu, FileListPopup, Add, 修改目标路径(&R), FileListRename
 	Menu, FileListPopup, Add
-	Menu, FileListPopup, Add, 属性(&P)..., FileListProperties
+	Menu, FileListPopup, Add, 属性(&P), FileListProperties
 
 	Gui, Font, s9 q5
 	Gui, Font, , MS Sans Serif
@@ -66,7 +71,7 @@ Main:
 	Gui, Add, Button, vButtonStartDistribute gStartDistribute default section, 开始分发(&S)
 	Gui, Add, Button, vButtonFileListAddFile gFileListAddFile ys, 添加文件(&A)...
 	Gui, Add, Button, vButtonFileListAddDirectory gFileListAddDirectory ys, 添加文件夹(&D)...
-	Gui, Add, Button, vButtonFileListRemove gFileListRemove ys, 删除(&D)
+	Gui, Add, Button, vButtonFileListRemove gFileListRemove ys, 删除/清空(&D)
 	Gui, Add, Button, vButtonorzTechAbout gorzTechAbout ys, 关于(&Z)...
 
 	LV_ModifyCol(1, "250")
@@ -167,15 +172,26 @@ FileListAddDir(Folder)
 	GuiControl, +Redraw, FileList
 }
 
+;change: 未选中项目时，则清空列表
 FileListRemove:
 	GuiControl, -Redraw, FileList
 	RowNumber = 0
-	Loop
+	If (LV_GetCount("Selected") = 0)
 	{
-	    RowNumber := LV_GetNext(0)
-	    if not RowNumber
-	        break
-	    LV_Delete(RowNumber)
+		MsgBox, 292, 清空文件列表, 是否清空文件列表？
+		IfMsgBox, Yes
+			LV_Delete()
+	}
+	else
+	{
+		Loop
+		{
+			RowNumber := LV_GetNext(0)
+			if not RowNumber
+				break
+			LV_Delete(RowNumber)
+			
+		}
 	}
 	GuiControl, +Redraw, FileList
 Return
@@ -183,11 +199,10 @@ Return
 FileListOpen:
 	If (LV_GetCount("Selected") > 1)
 	{
+		;change: 除去重复的对话框选项*2
 		Gui +OwnDialogs
-		MsgBox, 307, 正在打开多个文件, 您正试图一次性打开多个文件，然而这可能会导致系统缓慢。`n`n是否继续？
+		MsgBox, 308, 正在打开多个文件, 您正试图一次性打开多个文件，然而这可能会导致系统缓慢。`n`n是否继续？
 		IfMsgBox, No
-			return
-		else IfMsgBox, Cancel
 			return
 	}
 
@@ -208,6 +223,33 @@ FileListOpen:
 	}
 Return
 
+FileListOpenFolder:
+	If (LV_GetCount("Selected") > 1)
+	{
+		Gui +OwnDialogs
+		MsgBox, 308, 正在打开多个文件, 您正试图一次性打开多个文件所在的文件夹，然而这可能会导致系统缓慢。`n`n是否继续？
+		IfMsgBox, No
+			return
+	}
+
+	RowNumber = 0
+	Loop
+	{
+	    RowNumber := LV_GetNext(RowNumber)
+	    if not RowNumber
+	        break
+	    LV_GetText(SourceName, RowNumber, 3)
+		
+		SourceFolderPath := RegExReplace(SourceName, "\\[^\\]{1,}\\\.{3,}", "\\$1")
+		Run, Explorer.exe /select`,"%SourceName%", , UseErrorLevel
+	    if ErrorLevel
+	    {
+	    	Gui +OwnDialogs
+    		MsgBox 48, %SourceName%, 无法为“%SourceName%”执行指定的操作。
+    	}
+	}
+Return
+
 FileListRename:
 	GuiControl, Focus, FileList
 	Send {F2}
@@ -217,7 +259,7 @@ FileListProperties:
 	If (LV_GetCount("Selected") > 1)
 	{
 		Gui +OwnDialogs
-		MsgBox, 307, 正在打开多个文件, 您正试图一次性打开多个文件，然而这可能会导致系统缓慢。`n`n是否继续？
+		MsgBox, 308, 正在打开多个文件, 您正试图一次性打开多个文件，然而这可能会导致系统缓慢。`n`n是否继续？
 		IfMsgBox, No
 			return
 		else IfMsgBox, Cancel
@@ -253,14 +295,14 @@ FileListAdd(FileFullName, BasePath = "\")
 	SplitPath, FileFullName, FileName, FileDirectory, FileExt, FileNameWithoutExt, FileDrive
 	FileGetSize, FileSize, %FileFullName%, 
 	SetFormat, float, 0.2
-	FileSizeMB := FileSize / 1024
+	FileSizeKB := FileSize / 1024
 	DestFileName := FileNameWithoutExt
 	FileNumber := 1
 	while FileListInclude(GetCorrectDestFileName(BasePath . "\" . GetNumberedFileName(DestFileName, FileNumber) . "." . FileExt)) != false
     {
         FileNumber := FileNumber + 1
     }
-    LV_Add("", GetCorrectDestFileName(BasePath . "\\\\" . GetNumberedFileName(DestFileName, FileNumber) . "." . FileExt), FileSizeMB . " kb", FileFullName)
+    LV_Add("", GetCorrectDestFileName(BasePath . "\\\\" . GetNumberedFileName(DestFileName, FileNumber) . "." . FileExt), FileSizeKB . " KB", FileFullName)
 }
 
 GetCorrectDestFileName(DestFileName, OriginalFileName = "file.ext")
@@ -345,6 +387,10 @@ GuiEscape:
 	ExitApp
 Return
 
+RunEjectAppGUI:
+	Run, eject.exe
+Return
+
 GuiSize:
 	Anchor("FileList", "wh")
 	Anchor("ButtonStartDistribute", "y")
@@ -392,10 +438,41 @@ LV_SortArrow(h, c, d="")
    Return DllCall("SendMessage", uPtr, h, uPtr, LVM_SETCOLUMN, uPtr, c, uPtr, &lvColumn)
 }
 
+;converts Size (in bytes) to byte(s)/KB/MB/GB/TB (uses best option)
+;decimalPlaces is the number of decimal places to round
+autoByteFormat(size, decimalPlaces = 1)
+{
+    static size1 = "KB", size2 = "MB", size3 = "GB", size4 = "TB"
+
+    sizeIndex := 0
+
+    while (size >= 1024)
+    {
+        sizeIndex++
+        size /= 1024.0
+
+        if (sizeIndex = 4)
+            break
+    }
+
+    return (sizeIndex = 0) ? size " 字节" . (size != 1 ? "s" : "")
+        : round(size, decimalPlaces) . " " . size%sizeIndex%
+}
+
+
 StartDistribute:
+	;change: 增加列表空时的提示
+	If (LV_GetCount() = 0)
+	{
+		MsgBox, 308, 开始文件分发, 文件列表中没有要分发的文件，这会导致U盘插入后立刻被弹出。`n`n是否继续？
+		IfMsgBox, No
+			return
+	}
 	Gui, Submit
 	Menu, Tray, Icon
 	Gosub FileListExportToFile
+	;change: 增加使用提示
+	TrayTip, 文件分发已开始, 请直接插入U盘。`n如需停止，请右键点击托盘图标。
 	Goto WaitForNewDrive
 Return
 
@@ -429,12 +506,12 @@ FileListImportFromFile:
 		    }
 		    FileGetSize, FileSize, %SourceFileName%, 
 			SetFormat, float, 0.2
-			FileSizeMB := FileSize / 1024
+			FileSizeKB := FileSize / 1024
 
 			Loop %SourceFileName%
 				SourceFileName = %A_LoopFileLongPath%
 
-		    LV_Add("", DestFileName, FileSizeMB . " kb", SourceFileName)
+		    LV_Add("", DestFileName, FileSizeKB . " KB", SourceFileName)
 	    }
 	}
 Return
@@ -478,9 +555,20 @@ WaitForNewDrive:
 						DriveGet, DriveCapacity, capacity, %A_LoopField%:
 						DriveSpaceFree, DriveFree, %A_LoopField%:
 						DrivePercent := DriveFree / DriveCapacity * 100
-						TrayTip, %A_LoopField%: [%DriveLabel%] 已插入, 可用空间: %DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb)`n`n即将开始文件分发。
-						Sleep, 2000
-						Run, orzFilePosterCopier.exe orzFilePoster.lst %A_LoopField%
+						;关闭 TrayTip 提示
+						TrayTip
+						;change: 临时修改，避免插入U盘后无法取消自动弹出，导致新用户迷惑，以后会有更好的解决方案
+						Msgbox, 65, %DriveLabel%(%A_LoopField%:) 已插入, 可用空间: %DrivePercent%`% (%DriveFree% MB / %DriveCapacity% MB)`n`n即将开始文件分发，完成后自动弹出。`n要马上开始，请按确定。`n要取消分发，请按取消。, 2
+						;TrayTip, %A_LoopField%: [%DriveLabel%] 已插入, 可用空间: %DrivePercent%`% (%DriveFree% MB / %DriveCapacity% MB)`n`n即将开始文件分发。
+						;Sleep, 2000
+						IfMsgbox, Cancel
+						{
+						
+						}
+						Else
+						{
+							Run, orzFilePosterCopier.exe orzFilePoster.lst %A_LoopField%
+						}
 					}
 				}
 			}
