@@ -1,0 +1,494 @@
+orzTechGUI(Params*)
+{
+    static GUIUsed
+    static GUISinkStart = 90
+    static GUISinkEnd = 99
+    if (Params[1] == "A") or (Params[1] == "Alloc")
+    {
+        GUIId := GUISinkStart
+        Loop
+        {
+            If GUIId not in %GUIUsed%
+                Break
+            Else
+                If (++GUIId > GUISinkEnd)
+                    Return 0
+        }
+        GUIUsed .= "," . GUIId
+        Return GUIId
+    }
+    else if (Params[1] == "F") or (Params[1] == "Free")
+    {
+        GUIUsed := "," . GUIUsed . ","
+        StringReplace, GUIUsed, GUIUsed, % "," Params[2] ",", % ",", All
+        Loop
+        {
+            IfNotInString, GUIUsed, `,`,
+                Break
+            StringReplace, GUIUsed, GUIUsed, % ",,", % ",", All
+        }
+        GUIUsed := SubStr(GUIUsed, 2, -1)
+    }
+}
+
+/*
+	Function: Anchor
+		Defines how controls should be automatically positioned relative to the new dimensions of a window when resized.
+
+	Parameters:
+		cl - a control HWND, associated variable name or ClassNN to operate on
+		a - (optional) one or more of the anchors: 'x', 'y', 'w' (width) and 'h' (height),
+			optionally followed by a relative factor, e.g. "x h0.5"
+		r - (optional) true to redraw controls, recommended for GroupBox and Button types
+
+	Examples:
+> "xy" ; bounds a control to the bottom-left edge of the window
+> "w0.5" ; any change in the width of the window will resize the width of the control on a 2:1 ratio
+> "h" ; similar to above but directrly proportional to height
+
+	Remarks:
+		To assume the current window size for the new bounds of a control (i.e. resetting) simply omit the second and third parameters.
+		However if the control had been created with DllCall() and has its own parent window,
+			the container AutoHotkey created GUI must be made default with the +LastFound option prior to the call.
+		For a complete example see anchor-example.ahk.
+
+	License:
+		- Version 4.60a <http://www.autohotkey.net/~Titan/#anchor>
+		- Simplified BSD License <http://www.autohotkey.net/~Titan/license.txt>
+*/
+orzTechGUIAnchor(i, a = "", r = false)
+{
+   static c, cs = 12, cx = 255, cl = 0, g, gs = 8, gl = 0, gpi, gw, gh, z = 0, k = 0xffff, ptr
+   If z = 0
+      VarSetCapacity(g, gs * 99, 0), VarSetCapacity(c, cs * cx, 0), ptr := A_PtrSize ? "Ptr" : "UInt", z := true
+   If (!WinExist("ahk_id " . i)) {
+      GuiControlGet, t, Hwnd, %i%
+      If ErrorLevel = 0
+         i := t
+      Else ControlGet, i, Hwnd, , %i%
+   }
+   VarSetCapacity(gi, 68, 0), DllCall("GetWindowInfo", "UInt", gp := DllCall("GetParent", "UInt", i), ptr, &gi)
+      , giw := NumGet(gi, 28, "Int") - NumGet(gi, 20, "Int"), gih := NumGet(gi, 32, "Int") - NumGet(gi, 24, "Int")
+   If (gp != gpi) {
+      gpi := gp
+      Loop, %gl%
+         If (NumGet(g, cb := gs * (A_Index - 1)) == gp, "UInt") {
+            gw := NumGet(g, cb + 4, "Short"), gh := NumGet(g, cb + 6, "Short"), gf := 1
+            Break
+         }
+      If (!gf)
+         NumPut(gp, g, gl, "UInt"), NumPut(gw := giw, g, gl + 4, "Short"), NumPut(gh := gih, g, gl + 6, "Short"), gl += gs
+   }
+   ControlGetPos, dx, dy, dw, dh, , ahk_id %i%
+   Loop, %cl%
+      If (NumGet(c, cb := cs * (A_Index - 1), "UInt") == i) {
+         If a =
+         {
+            cf = 1
+            Break
+         }
+         giw -= gw, gih -= gh, as := 1, dx := NumGet(c, cb + 4, "Short"), dy := NumGet(c, cb + 6, "Short")
+            , cw := dw, dw := NumGet(c, cb + 8, "Short"), ch := dh, dh := NumGet(c, cb + 10, "Short")
+         Loop, Parse, a, xywh
+            If A_Index > 1
+               av := SubStr(a, as, 1), as += 1 + StrLen(A_LoopField)
+                  , d%av% += (InStr("yh", av) ? gih : giw) * (A_LoopField + 0 ? A_LoopField : 1)
+         DllCall("SetWindowPos", "UInt", i, "UInt", 0, "Int", dx, "Int", dy
+            , "Int", InStr(a, "w") ? dw : cw, "Int", InStr(a, "h") ? dh : ch, "Int", 4)
+         If r != 0
+            DllCall("RedrawWindow", "UInt", i, "UInt", 0, "UInt", 0, "UInt", 0x0101) ; RDW_UPDATENOW | RDW_INVALIDATE
+         Return
+      }
+   If cf != 1
+      cb := cl, cl += cs
+   bx := NumGet(gi, 48, "UInt"), by := NumGet(gi, 16, "Int") - NumGet(gi, 8, "Int") - gih - NumGet(gi, 52, "UInt")
+   If cf = 1
+      dw -= giw - gw, dh -= gih - gh
+   NumPut(i, c, cb, "UInt"), NumPut(dx - bx, c, cb + 4, "Short"), NumPut(dy - by, c, cb + 6, "Short")
+      , NumPut(dw, c, cb + 8, "Short"), NumPut(dh, c, cb + 10, "Short")
+   Return, true
+}
+
+;;;;;changed some default settings by orzFly
+;;;;;multiple default font
+;;;;;;;
+;;;;;  Notify() 0.45                made by gwarble - sept 09
+;;;      multiple tray area notifications
+;          thanks to Rhys/engunneer/HugoV/Forum Posters
+;
+;   Notify([Title,Message,Duration,Options,Image])
+;
+;     Title      [!!!]          "" to omit title line
+;     Message      []           "" to omit message line
+;     Duration    [15]          seconds to show notification
+;                                 0  to flash until clicked
+;                                <0  to ExitApp on click/timeout
+;                               "-0" for permanent and exitOnClick
+;     Options                   string of options... see function
+;          [SI=999 GC=Blue...]  most options are remembered (static)
+;                               "Reset" to restore default options
+;                                 if you want to show as well, use NO=Reset
+;                               "Wait" to wait for a notification  ***
+;     Image []                  Image file name/library or
+;                               number of icon in shell32.dll
+;                               Gui Number to "Wait" for          ***
+;
+;     Return                    Gui Number used                   ***
+;                               0 if failed (too many open)
+;
+orzTechGUINotify(Title="!!!",Message="",Duration=30,Options="",Image="",Zany="")
+{
+ Static                ;Options string: "TS=12 GC=Blue..."
+ static GF := 40       ;    Gui First Number  ;= override Gui: # used
+ static GL := 64       ;    Gui Last Number   ;= between GF and GL
+ static GC := "222222" ;    Gui Color         ;   ie: don't use GF<=Gui#<=GL
+ static GR := 9        ;    Gui Radius        ;       elsewhere in your script
+ static GT := "Off"    ;    Gui Transparency
+ static TS := 10        ;  Title Font Size
+ static TW := 625      ;  Title Font Weight
+ static TC := "EEEEEE"  ;  Title Font Color
+ static TF := "MS Sans Serif,Arial,Verdana,Tahoma,Segoe UI"  ;  Title Font Face
+ static MS := 9        ;Message Font Size
+ static MW := 550      ;Message Font Weight
+ static MC := "BBBBBB"  ;Message Font Color
+ static MF := "MS Sans Serif,Arial,Verdana,Tahoma,Segoe UI"  ;Message Font Face
+ static ZS := 7        ;Zany Font Size
+ static ZW := 550      ;Zany Font Weight
+ static ZC := "555555"  ;Zany Font Color
+ static ZF := "MS Sans Serif,Arial,Verdana,Tahoma,Segoe UI"  ;Message Font Face
+ static BC := "FFFFFF"  ; Border Colors
+ static BW := 1        ; Border Width/Thickness
+ static BR := 9       ; Border Radius
+ static BT := 105      ; Border Transpacency
+ static BF := 150      ; Border Flash Speed
+ static SI := 350      ;  Speed In (AnimateWindow)
+ static SC := 100      ;  Speed Clicked (AnimateWindow)
+ static ST := 450      ;  Speed TimeOut (AnimateWindow)
+ static IW := 32       ;  Image Width
+ static IH := 32       ;  Image Height
+ static IN := 0        ;  Image Icon Number (from Image)
+ static AX = 1         ; Action X Close Button (maybe add yes/no ok/cancel, etc...)
+ local AC, AT          ;Actions Clicked/Timeout
+ local _Notify_Action, ImageOptions, GY, OtherY
+ global ApplicationName, ApplicationVersion
+_Notify_:
+ local NO := 0         ;NO is Notify Option [NO=Reset]
+ If (Options)
+ {
+  IfInString, Options, =
+  {
+   Loop,Parse,Options,|
+    If (Option:= SubStr(A_LoopField,1,2))
+     %Option%:= SubStr(A_LoopField,4)
+   If NO = Reset
+   {
+    Options := "GF=50|GL=74|GC=FFFFAA|GR=9|GT=Off|"
+     . "TS=8|TW=625|TC=Black|TF=Arial|MS=8|MW=550|MC=Black|MF=Arial|"
+     . "BC=Black|BW=2|BR=9|BT=105|BF=150|SC=300|SI=250|ST=100|"
+     . "IW=32|IH=32|IN=0"
+    Goto, _Notify_
+   }
+  }
+  Else If Options = Wait
+   Goto, _Notify_Wait_
+ }
+
+
+ GN := GF
+ Loop
+  IfNotInString, NotifyList, % "|" GN
+   Break
+  Else
+  If (++GN > GL)
+    Return 0              ;=== too many notifications open!
+ NotifyList .= "|" GN
+ GN2 := GN + GL - GF + 1
+ If AC <>
+  ActionList .= "|" GN "=" AC
+
+ Prev_DetectHiddenWindows := A_DetectHiddenWindows
+ Prev_TitleMatchMode := A_TitleMatchMode
+ DetectHiddenWindows On
+ SetTitleMatchMode 1
+ If (WinExist("orzTechNotifyGui"))  ;=== find all Notifications from ALL scripts, for placement
+  WinGetPos, OtherX, OtherY  ;=== change this to a loop for all open notifications?
+ DetectHiddenWindows %Prev_DetectHiddenWindows%
+ SetTitleMatchMode %Prev_TitleMatchMode%
+
+ Gui, %GN%:-Caption +ToolWindow +AlwaysOnTop -Border
+ Gui, %GN%:Color, %GC%
+ Gui, %GN%:Font, w%TW% s%TS% c%TC%
+ Loop, parse, TF, `,
+ 	Gui, %GN%:Font,, %A_LoopField%
+ If (Image)
+ {
+  If FileExist(Image)
+   Gui, %GN%:Add, Picture, w%IW% h%IH% Icon%IN%, % Image
+  Else
+  {
+  	If A_IsCompiled
+     Gui, %GN%:Add, Picture, w%IW% h%IH% Icon%Image%, %A_ScriptFullPath%
+  }
+  ImageOptions = x+10
+ }
+ If Title <>
+  Gui, %GN%:Add, Text, % ImageOptions, % Title
+ Gui, %GN%:Font, w%MW% s%MS% c%MC%
+ Loop, parse, MF, `,
+ 	Gui, %GN%:Font,, %A_LoopField%
+ If ((Title) && (Message))
+  Gui, %GN%:Margin, , -5
+ If Message <>
+  Gui, %GN%:Add, Text,, % Message
+ 
+ Gui, %GN%:Font, w%ZW% s%ZS% c%ZC%
+ Loop, parse, ZF, `,
+ 	Gui, %GN%:Font,, %A_LoopField%
+ If Zany <>
+ 	Gui, %GN%:Add, Text,, % Zany
+ Else
+ 	Gui, %GN%:Add, Text,, %ApplicationName% %ApplicationVersion%
+ 	
+ If ((Title) && (Message))
+  Gui, %GN%:Margin, , 8
+  
+  
+ Gui, %GN%:Show, Hide, orzTechNotifyGui
+ Gui  %GN%:+LastFound
+ WinGetPos, GX, GY, GW, GH
+
+ If AX =
+ {
+  GW += 10
+  Gui, %GN%:Font, w800 s6 c%MC%
+  Gui, %GN%:Add, Text, % "x" GW-11 " y-1 Border Center w12 h12 g_Notify_Kill_" GN - GF + 1, X
+ }
+
+ Gui, %GN%:Add, Text, x0 y0 w%GW% h%GH% g_Notify_Action BackgroundTrans
+ If (GR)
+  WinSet, Region, % "0-0 w" GW " h" GH " R" GR "-" GR
+ If (GT)
+  WinSet, Transparent, % GT
+
+ SysGet, Workspace, MonitorWorkArea
+ NewX := WorkSpaceRight-GW-5
+ If (OtherY)
+  NewY := OtherY-GH-5
+ Else
+  NewY := WorkspaceBottom-GH-5
+ If NewY < % WorkspaceTop
+  NewY := WorkspaceBottom-GH-5
+
+ Gui, %GN2%:-Caption +ToolWindow +AlwaysOnTop -Border +E0x20
+ Gui, %GN2%:Color, %BC%
+ Gui  %GN2%:+LastFound
+ If (BR)
+  WinSet, Region, % "0-0 w" GW+(BW*2) " h" GH+(BW*2) " R" BR "-" BR
+ If (BT)
+  WinSet, Transparent, % BT
+
+ Gui, %GN2%:Show, % "Hide x" NewX-BW " y" NewY-BW " w" GW+(BW*2) " h" GH+(BW*2)
+ Gui, %GN%:Show,  % "Hide x" NewX " y" NewY " w" GW, orzTechNotifyGui
+ Gui  %GN%:+LastFound
+ If SI
+  DllCall("AnimateWindow","UInt",WinExist(),"Int",SI,"UInt","0x00040008")
+ Else
+  Gui, %GN%:Show, NA, orzTechNotifyGui
+ Gui, %GN2%:Show, NA
+ WinSet, AlwaysOnTop, On
+
+ If ((Duration < 0) OR (Duration = "-0"))
+  Exit := GN
+ If (Duration)
+   SetTimer, % "_Notify_Kill_" GN - GF + 1, % - Abs(Duration) * 1000
+ Else
+  SetTimer, % "_Notify_Flash_" GN - GF + 1, % BF
+
+Return % GN
+
+;==========================================================================
+;========================================== when a notification is clicked:
+_Notify_Action:
+ ;Critical
+ SetTimer, % "_Notify_Kill_" A_Gui - GF + 1, Off
+ Gui, % A_Gui + GL - GF + 1 ":Destroy"
+ Gui  %A_Gui%:+LastFound
+ If SC
+  DllCall("AnimateWindow","UInt",WinExist(),"Int",SC,"UInt", "0x00050001")
+ Gui, %A_Gui%:Destroy
+ If (ActionList)
+  Loop,Parse,ActionList,|
+   If ((Action := SubStr(A_LoopField,1,2)) = A_Gui)
+   {
+    Temp_Notify_Action:= SubStr(A_LoopField,4)
+    StringReplace, ActionList, ActionList, % "|" A_Gui "=" Temp_Notify_Action, , All
+    If IsLabel(_Notify_Action := Temp_Notify_Action)
+     Gosub, %_Notify_Action%
+    _Notify_Action =
+    Break
+   }
+ StringReplace, NotifyList, NotifyList, % "|" GN, , All
+ SetTimer, % "_Notify_Flash_" A_Gui - GF + 1, Off
+ If (Exit = A_Gui)
+  ExitApp
+Return
+
+;==========================================================================
+;=========================================== when a notification times out:
+_Notify_Kill_1:
+_Notify_Kill_2:
+_Notify_Kill_3:
+_Notify_Kill_4:
+_Notify_Kill_5:
+_Notify_Kill_6:
+_Notify_Kill_7:
+_Notify_Kill_8:
+_Notify_Kill_9:
+_Notify_Kill_10:
+_Notify_Kill_11:
+_Notify_Kill_12:
+_Notify_Kill_13:
+_Notify_Kill_14:
+_Notify_Kill_15:
+_Notify_Kill_16:
+_Notify_Kill_17:
+_Notify_Kill_18:
+_Notify_Kill_19:
+_Notify_Kill_20:
+_Notify_Kill_21:
+_Notify_Kill_22:
+_Notify_Kill_23:
+_Notify_Kill_24:
+_Notify_Kill_25:
+ ;Critical
+ StringReplace, GK, A_ThisLabel, _Notify_Kill_
+ SetTimer, _Notify_Flash_%GK%, Off
+ GK += GF - 1
+ Gui, % GK + GL - GF + 1 ":Destroy"
+ Gui  %GK%:+LastFound
+ If ST
+  DllCall("AnimateWindow","UInt",WinExist(),"Int",ST,"UInt", "0x00050001")
+ Gui, %GK%:Destroy
+ StringReplace, NotifyList, NotifyList, % "|" GK
+ If (Exit = GK)
+  ExitApp
+Return
+
+;==========================================================================
+;======================================== flashes a permanent notification:
+_Notify_Flash_1:
+_Notify_Flash_2:
+_Notify_Flash_3:
+_Notify_Flash_4:
+_Notify_Flash_5:
+_Notify_Flash_6:
+_Notify_Flash_7:
+_Notify_Flash_8:
+_Notify_Flash_9:
+_Notify_Flash_10:
+_Notify_Flash_11:
+_Notify_Flash_12:
+_Notify_Flash_13:
+_Notify_Flash_14:
+_Notify_Flash_15:
+_Notify_Flash_16:
+_Notify_Flash_17:
+_Notify_Flash_18:
+_Notify_Flash_19:
+_Notify_Flash_20:
+_Notify_Flash_21:
+_Notify_Flash_22:
+_Notify_Flash_23:
+_Notify_Flash_24:
+_Notify_Flash_25:
+ StringReplace, FlashGN, A_ThisLabel, _Notify_Flash_
+ FlashGN += GF - 1
+ FlashGN2 := FlashGN + GL - GF + 1
+ If Flashed%FlashGN2% := !Flashed%FlashGN2%
+  Gui, %FlashGN2%:Color, Silver
+ Else
+  Gui, %FlashGN2%:Color, % BC
+Return
+
+;==========================================================================
+;============================= wait for (or force) a notification to close:
+_Notify_Wait_:
+ ;Critical
+ If (Image)
+ {
+  Gui %Image%:+LastFound
+  If NotifyGuiID := WinExist()
+  {
+   WinWaitClose, , , % Abs(Duration)
+   If (ErrorLevel && Duration < 1)
+   {
+    Gui, % Image + GL - GF + 1 ":Destroy"
+    DllCall("AnimateWindow","UInt",NotifyGuiID,"Int",ST,"UInt","0x00050001")
+    Gui, %Image%:Destroy
+   }
+  }
+ }
+ Else
+ Loop, % GL-GF
+ {
+  Image := GL - (A_Index) ;+ GF - 1)
+  Gui %Image%:+LastFound
+  If NotifyGuiID := WinExist()
+  {
+   ;WinWaitClose, , , % Abs(Duration)
+   ;If (ErrorLevel && Duration < 1)
+   ;{
+    Gui, % Image + GL - GF + 1 ":Destroy"
+    DllCall("AnimateWindow","UInt",NotifyGuiID,"Int",ST,"UInt","0x00050001")
+    Gui, %Image%:Destroy
+   ;}
+  }
+ }
+Return
+}
+
+orzTechGUIInputboxInteger(ParentGUIID, WindowTitle, WindowText, OrigValue, MinValue, MaxValue)
+{
+    global
+    local GUIID, Result
+    GUIID := orzTechGUI("A")
+    If (GUIID == 0)
+        Return
+	Gui, %ParentGUIID%:+Disabled
+	Gui, %GUIID%:+Owner%ParentGUIID%
+    Gui, %GUIID%:+LabelInputboxInteger
+	Gui, %GUIID%:Font, s8, Tahoma
+	Gui, %GUIID%:Font, , Segoe UI
+    Gui, %GUIID%:Add, Text,, %WindowText%
+    Gui, %GUIID%:Add, Edit, vInputboxIntegerEdit Number +Right
+    Gui, %GUIID%:Add, UpDown, Range%MinValue%-%MaxValue% 0x80, %OrigValue%
+    Gui, %GUIID%:Add, Button, vInputboxIntegerButtonOK gInputboxIntegerButtonOK Default section, % $("ButtonOK", "orzTechGUI")
+    Gui, %GUIID%:Add, Button, vInputboxIntegerButtonCancel gInputboxIntegerButtonCancel ys, % $("ButtonCancel", "orzTechGUI")
+    Gui, %GUIID%:-MinimizeBox
+	Gui, %GUIID%:Show, , % WindowTitle
+	Gui, %GUIID%:+LastFound
+    WinWaitClose
+    If (Result > MaxValue)
+        Result := MaxValue
+    If (Result < MinValue)
+        Result := MinValue
+	return Result
+    
+    InputboxIntegerButtonOK:
+        GUIControlGet, InputboxIntegerEdit
+        Result := InputboxIntegerEdit
+        Gui, %ParentGUIID%:-Disabled
+		Gui, %GUIID%:Destroy
+        orzTechGUI("F", GUIID)
+    return
+
+    InputboxIntegerButtonCancel:
+    InputboxIntegerEscape:
+	InputboxIntegerClose:
+        Result := OrigValue
+        Gui, %ParentGUIID%:-Disabled
+		Gui, %GUIID%:Destroy
+        orzTechGUI("F", GUIID)
+	return
+}
+;orzTechSettingsGUINotifySettings()

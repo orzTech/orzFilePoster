@@ -1,0 +1,340 @@
+$(Params*)
+{
+    global SettingsLanguage
+    if SettingsLanguage=
+        SettingsLanguage := A_Language
+    Return orzTechLanguages(SettingsLanguage, Params*)
+}
+
+orzTechLanguages(Params*)
+{
+    local LangCode, KeyName, PartName, Result, IDName
+    LangCode := Params[1]
+    KeyName := Params[2]
+    PartName := Params[3]
+    IDName := PartName . "@" . LangCode
+    if IDName not in %orzTechLanguagesIncludeParts%
+        orzTechLanguagesInclude(PartName, LangCode)
+    Result := orzTechLanguages_%LangCode%_%PartName%_%KeyName%
+    If Result=
+    {
+        Result := "#" . PartName . "@" . LangCode . ":" . KeyName
+    }
+    for index, param in Params
+    {
+        if (index >= 4)
+        {
+            SearchText := "%" . (index - 3)
+            StringReplace, Result, Result, %SearchText%, %param%, All
+        }
+    }
+    Return Result
+}
+
+orzTechLanguagesInclude(PartName, LangCode="")
+{
+    global orzTechLanguagesIncludeParts, SettingsLanguage
+    
+    if SettingsLanguage=
+        SettingsLanguage := A_Language
+    
+    if LangCode=
+        LangCode := orzTechLanguagesMatchLanguage(SettingsLanguage, orzTechLanguagesAvailableLanguagesList(PartName))
+    else
+        LangCode := orzTechLanguagesMatchLanguage(LangCode, orzTechLanguagesAvailableLanguagesList(PartName))
+    
+    IDName := PartName . "@" . LangCode
+    if IDName in %orzTechLanguagesIncludeParts%
+        Return
+    orzTechLanguagesIncludeParts .= IDName . ","
+
+    FileName := A_ScriptDir . "\mui\" . LangCode . "\" . PartName . ".mui"
+    
+    IfExist, %FileName%
+        _orzTechLanguagesInclude(FileName, PartName, LangCode)
+}
+
+_orzTechLanguagesInclude(FileName, PartName, LangCode)
+{
+    global
+    local Key, Content, Pos
+    Loop, Read, %FileName%
+    {
+        Pos := InStr(A_LoopReadLine, "=", false, 1, 1)
+        Key := SubStr(A_LoopReadLine, 1, Pos - 1)
+        Content := SubStr(A_LoopReadLine, Pos + 1)
+        orzTechLanguages_%LangCode%_%PartName%_%Key% := Content
+    }
+}
+
+orzTechLanguagesName(Code)
+{
+    Static LanguageCode_0436 = "Afrikaans"
+    Static LanguageCode_041c = "Albanian"
+    Static LanguageCode_0401 = "Arabic (Saudi Arabia)"
+    Static LanguageCode_0801 = "Arabic (Iraq)"
+    Static LanguageCode_0c01 = "Arabic (Egypt)"
+    Static LanguageCode_1001 = "Arabic (Libya)"
+    Static LanguageCode_1401 = "Arabic (Algeria)"
+    Static LanguageCode_1801 = "Arabic (Morocco)"
+    Static LanguageCode_1c01 = "Arabic (Tunisia)"
+    Static LanguageCode_2001 = "Arabic (Oman)"
+    Static LanguageCode_2401 = "Arabic (Yemen)"
+    Static LanguageCode_2801 = "Arabic (Syria)"
+    Static LanguageCode_2c01 = "Arabic (Jordan)"
+    Static LanguageCode_3001 = "Arabic (Lebanon)"
+    Static LanguageCode_3401 = "Arabic (Kuwait)"
+    Static LanguageCode_3801 = "Arabic (UAE)"
+    Static LanguageCode_3c01 = "Arabic (Bahrain)"
+    Static LanguageCode_4001 = "Arabic (Qatar)"
+    Static LanguageCode_042b = "Armenian"
+    Static LanguageCode_042c = "Azeri (Latin)"
+    Static LanguageCode_082c = "Azeri (Cyrillic)"
+    Static LanguageCode_042d = "Basque"
+    Static LanguageCode_0423 = "Belarusian"
+    Static LanguageCode_0402 = "Bulgarian"
+    Static LanguageCode_0403 = "Catalan"
+    Static LanguageCode_0404 = "Chinese (Traditional, Taiwan)"
+    Static LanguageCode_0804 = "Chinese (Simplified, PRC)"
+    Static LanguageCode_0c04 = "Chinese (Traditional, Hong Kong)"
+    Static LanguageCode_1004 = "Chinese (Traditional, Singapore)"
+    Static LanguageCode_1404 = "Chinese (Traditional, Macau)"
+    Static LanguageCode_1404 = "Chinese (Traditional, Macau)"
+    Static LanguageCode_041a = "Croatian"
+    Static LanguageCode_0405 = "Czech"
+    Static LanguageCode_0406 = "Danish"
+    Static LanguageCode_0413 = "Dutch (Standard)"
+    Static LanguageCode_0813 = "Dutch (Belgian)"
+    Static LanguageCode_0409 = "English (United States)"
+    Static LanguageCode_0809 = "English (United Kingdom)"
+    Static LanguageCode_0c09 = "English (Australian)"
+    Static LanguageCode_1009 = "English (Canadian)"
+    Static LanguageCode_1409 = "English (New Zealand)"
+    Static LanguageCode_1809 = "English (Irish)"
+    Static LanguageCode_1c09 = "English (South Africa)"
+    Static LanguageCode_2009 = "English (Jamaica)"
+    Static LanguageCode_2409 = "English (Caribbean)"
+    Static LanguageCode_2809 = "English (Belize)"
+    Static LanguageCode_2c09 = "English (Trinidad)"
+    Static LanguageCode_3009 = "English (Zimbabwe)"
+    Static LanguageCode_3409 = "English (Philippines)"
+    Static LanguageCode_0425 = "Estonian"
+    Static LanguageCode_0438 = "Faeroese"
+    Static LanguageCode_0429 = "Farsi"
+    Static LanguageCode_040b = "Finnish"
+    Static LanguageCode_040c = "French (Standard)"
+    Static LanguageCode_080c = "French (Belgian)"
+    Static LanguageCode_0c0c = "French (Canadian)"
+    Static LanguageCode_100c = "French (Swiss)"
+    Static LanguageCode_140c = "French (Luxembourg)"
+    Static LanguageCode_180c = "French (Monaco)"
+    Static LanguageCode_0437 = "Georgian"
+    Static LanguageCode_0407 = "German (Standard)"
+    Static LanguageCode_0807 = "German (Swiss)"
+    Static LanguageCode_0c07 = "German (Austrian)"
+    Static LanguageCode_1007 = "German (Luxembourg)"
+    Static LanguageCode_1407 = "German (Liechtenstein)"
+    Static LanguageCode_0408 = "Greek"
+    Static LanguageCode_040d = "Hebrew"
+    Static LanguageCode_0439 = "Hindi"
+    Static LanguageCode_040e = "Hungarian"
+    Static LanguageCode_040f = "Icelandic"
+    Static LanguageCode_0421 = "Indonesian"
+    Static LanguageCode_0410 = "Italian (Standard)"
+    Static LanguageCode_0810 = "Italian (Swiss)"
+    Static LanguageCode_0411 = "Japanese"
+    Static LanguageCode_043f = "Kazakh"
+    Static LanguageCode_0457 = "Konkani"
+    Static LanguageCode_0412 = "Korean"
+    Static LanguageCode_0426 = "Latvian"
+    Static LanguageCode_0427 = "Lithuanian"
+    Static LanguageCode_042f = "Macedonian"
+    Static LanguageCode_043e = "Malay (Malaysia)"
+    Static LanguageCode_083e = "Malay (Brunei Darussalam)"
+    Static LanguageCode_044e = "Marathi"
+    Static LanguageCode_0414 = "Norwegian (Bokmal)"
+    Static LanguageCode_0814 = "Norwegian (Nynorsk)"
+    Static LanguageCode_0415 = "Polish"
+    Static LanguageCode_0416 = "Portuguese (Brazilian)"
+    Static LanguageCode_0816 = "Portuguese (Standard)"
+    Static LanguageCode_0418 = "Romanian"
+    Static LanguageCode_0419 = "Russian"
+    Static LanguageCode_044f = "Sanskrit"
+    Static LanguageCode_081a = "Serbian (Latin)"
+    Static LanguageCode_0c1a = "Serbian (Cyrillic)"
+    Static LanguageCode_041b = "Slovak"
+    Static LanguageCode_0424 = "Slovenian"
+    Static LanguageCode_040a = "Spanish (Traditional Sort)"
+    Static LanguageCode_080a = "Spanish (Mexican)"
+    Static LanguageCode_0c0a = "Spanish (Modern Sort)"
+    Static LanguageCode_100a = "Spanish (Guatemala)"
+    Static LanguageCode_140a = "Spanish (Costa_Rica)"
+    Static LanguageCode_180a = "Spanish (Panama)"
+    Static LanguageCode_1c0a = "Spanish (Dominican Republic)"
+    Static LanguageCode_200a = "Spanish (Venezuela)"
+    Static LanguageCode_240a = "Spanish (Colombia)"
+    Static LanguageCode_280a = "Spanish (Peru)"
+    Static LanguageCode_2c0a = "Spanish (Argentina)"
+    Static LanguageCode_300a = "Spanish (Ecuador)"
+    Static LanguageCode_340a = "Spanish (Chile)"
+    Static LanguageCode_380a = "Spanish (Uruguay)"
+    Static LanguageCode_3c0a = "Spanish (Paraguay)"
+    Static LanguageCode_400a = "Spanish (Bolivia)"
+    Static LanguageCode_440a = "Spanish (El Salvador)"
+    Static LanguageCode_480a = "Spanish (Honduras)"
+    Static LanguageCode_4c0a = "Spanish (Nicaragua)"
+    Static LanguageCode_500a = "Spanish (Puerto_Rico)"
+    Static LanguageCode_0441 = "Swahili"
+    Static LanguageCode_041d = "Swedish"
+    Static LanguageCode_081d = "Swedish (Finland)"
+    Static LanguageCode_0449 = "Tamil"
+    Static LanguageCode_0444 = "Tatar"
+    Static LanguageCode_041e = "Thai"
+    Static LanguageCode_041f = "Turkish"
+    Static LanguageCode_0422 = "Ukrainian"
+    Static LanguageCode_0420 = "Urdu"
+    Static LanguageCode_0443 = "Uzbek (Latin)"
+    Static LanguageCode_0843 = "Uzbek (Cyrillic)"
+    Static LanguageCode_042a = "Vietnamese"
+
+    Language := LanguageCode_%Code%
+    Return Language
+}
+
+orzTechLanguagesAvailableLanguagesList(PartName)
+{
+    Result=
+    Loop, %A_ScriptDir%\mui\????, 2, 0
+    {
+        IfExist %A_LoopFileFullPath%\%PartName%.mui
+        {
+            Result .= SubStr(A_LoopFileName, -3) . ","
+        }
+    }
+    Return Result
+}
+
+orzTechLanguagesMatchLanguage(DestLanguage, AvailableList)
+{
+    If DestLanguage in %AvailableList%
+        Return %DestLanguage%
+    Else
+        Return "0804" ;todo
+}
+
+orzTechLanguagesLoadLanguageSettings()
+{
+    global
+    IniRead, SettingsLanguage, %A_ScriptFullPath%.settings, General, Language, %A_Language%
+}
+
+orzTechLanguagesChangeLanguageSettings(LanguageCode)
+{
+    global
+    IniWrite, %LanguageCode%, %A_ScriptFullPath%.settings, General, Language
+}
+
+orzTechLanguagesGUI(ParentGUIID=0)
+{
+    global
+    local LangCode
+    GUIID := orzTechGUI("A")
+    If orzTechLanguagesGUIhwnd=
+        orzTechLanguagesGUIhwnd := 0
+    If (GUIID == 0) or (orzTechLanguagesGUIhwnd != 0)
+        Return
+	If (ParentGUIID != 0)
+	{
+		Gui, %ParentGUIID%:+Disabled
+		Gui, %GUIID%:+Owner%ParentGUIID%
+	}
+    Gui, %GUIID%:Default
+    Gui, %GUIID%:+LabelLanguagesGUI
+	Gui, %GUIID%:Font, s8, Tahoma
+	Gui, %GUIID%:Font, , Segoe UI
+    Gui, %GUIID%:Add, ListView, +BackgroundDefault +Report -Multi +NoSortHdr NoSort -Hdr +LV0x20 R10 w500 vLanguagesView AltSubmit gLanguagesGUIListViewEvents , Code|Name|Local Name
+    
+    Gui, %GUIID%:Add, Button, Default Hidden gLanguagesGUIListViewEnter xp yp wp hp, OK
+    LV_Delete()
+    Loop, %A_ScriptDir%\mui\????, 2, 0
+    {
+        LangCode := SubStr(A_LoopFileName, -3)
+        LV_Add(SettingsLanguage == LangCode ? "Select" : "", LangCode, orzTechLanguagesName(LangCode), orzTechLanguages(LangCode, "LocalName", "orzTechLanguages"))
+    }
+    LV_ModifyCol(1, "AutoHdr")
+    LV_ModifyCol(2, "AutoHdr")
+    LV_ModifyCol(3, "AutoHdr")
+        
+    Gui, %GUIID%:Add, Button, vButtonUse gLanguagesGUIButtonUse section, % $("ButtonUse", "orzTechLanguages")
+    ;Gui, %GUIID%:Add, Button, vButtonInstall gLanguagesGUIButtonInstall ys, % $("ButtonInstall", "orzTechLanguages")
+    ;Gui, %GUIID%:Add, Button, vButtonUninstall gLanguagesGUIButtonUninstall ys, % $("ButtonUninstall", "orzTechLanguages")
+    Gui, %GUIID%:Add, Button, vButtonClose gLanguagesGUIButtonClose ys, % $("ButtonClose", "orzTechLanguages")
+    Gui, %GUIID%:+Resize
+	Gui, %GUIID%:Show, , % $("WindowCaption", "orzTechLanguages")
+	Gui, %GUIID%:+LastFound
+    WinGet, orzTechLanguagesGUIhwnd, ID
+    WinWaitClose
+	return
+	
+	LanguagesGUISize:
+    	orzTechGUIAnchor("LanguagesView", "wh")
+    	orzTechGUIAnchor("ButtonUse", "y")
+    	;orzTechGUIAnchor("ButtonInstall", "y")
+    	;orzTechGUIAnchor("ButtonUninstall", "y")
+    	orzTechGUIAnchor("ButtonClose", "y")
+        LV_ModifyCol(1, "AutoHdr")
+        LV_ModifyCol(2, "AutoHdr")
+        LV_ModifyCol(3, "AutoHdr")
+    Return
+	
+	;LanguagesGUIButtonInstall:
+	;LanguagesGUIButtonUninstall:
+    ;return
+    
+    LanguagesGUIButtonClose:
+	LanguagesGUIEscape:
+	LanguagesGUIClose:
+		If (ParentGUIID != 0)
+		{
+			Gui, %ParentGUIID%:-Disabled
+		}
+		
+        Gui, 1:Default
+		Gui, %GUIID%:Destroy
+        orzTechLanguagesGUIhwnd := 0
+        orzTechGUI("F", GUIID)
+	return
+    
+    LanguagesGUIListViewEnter:
+        GuiControlGet, FocusedControl, FocusV
+        if FocusedControl <> LanguagesView
+            return
+        Gosub LanguagesGUIExecuteSelectedItem
+    return
+    
+    LanguagesGUIListViewEvents:
+        if A_GuiEvent = DoubleClick
+            Gosub LanguagesGUIExecuteSelectedItem
+        if A_GuiEvent = K
+            if (A_EventInfo == 32)
+                Gosub LanguagesGUIExecuteSelectedItem
+    return
+    
+    LanguagesGUIButtonUse:
+    LanguagesGUIExecuteSelectedItem:
+        If (LV_GetNext(0) == 0)
+            Return
+        LV_GetText(LangCode, LV_GetNext(0), 1)
+        orzTechLanguagesChangeLanguageSettings(LangCode)
+        Reload
+    return
+}
+
+orzTechLanguagesMenu:
+    If orzTechLanguagesGUIhwnd=
+        orzTechLanguagesGUIhwnd := 0
+    If orzTechLanguagesGUIhwnd != 0
+        WinActivate, ahk_id %orzTechLanguagesGUIhwnd%
+    Else
+	    orzTechLanguagesGUI()
+Return
