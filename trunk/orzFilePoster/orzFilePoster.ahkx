@@ -15,23 +15,35 @@ Author1=Yeechan Lu
 Author2=Hongyu Pan
 Acknowledgements=http://www.autohotkey.com/forum/topic69642.html (LV_SortArrow by Solar)`nhttp://quick.mixnmojo.com/usb-disk-ejector (USB Disk Ejector by bengorman)`nhttp://www.autohotkey.com/forum/topic43122.html (autoByteFormat by animeaime)
 
-    Main()
+	Main()
 return
-#SingleInstance ignore
-#Include ..\_common\GUIAnchor.ahk
-#Include ..\_common\orzTechAbout.ahkx
 
 Main()
 {
     Gosub Main
 }
 
+#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
+#SingleInstance ignore
+#Include ..\_common.new\orzTechCommon.ahkx
+#Include ..\_common.new\orzTechSettings.ahkx
+#Include ..\_common.new\orzTechLanguages.ahkx
+#Include ..\_common.new\orzTechGUI.ahkx
+#Include ..\_common.new\GUIAnchor.ahk
+#Include ..\_common.new\orzTechAbout.ahkx
+	
 Main:
     FileInstall, orzFilePosterCopier.exe, %A_ScriptDir%\orzFilePosterCopier.exe, 1
     FileInstall, Eject.exe, %A_ScriptDir%\Eject.exe, 1
     
 	FileEncoding, UTF-8-RAW
 	SetFormat, float, 0.2
+	
+	orzTechLanguagesLoadLanguageSettings()
+    orzTechLanguagesInclude("orzTechSettings")
+    orzTechLanguagesInclude("orzTechAbout")
+    ;orzTechLanguagesInclude("orzUnplugged")
+    orzTechSettingsLoad()
 
 	Menu, Tray, NoIcon
 	Menu, Tray, NoStandard
@@ -42,7 +54,7 @@ Main:
 	;change: 增加在右键菜单直接打开 eject.exe 的选项
 	Menu, Tray, Add, 快速弹出U盘(&E), RunEjectAppGUI
 	Menu, Tray, Add, 
-	Menu, Tray, Add, 退出(&X), GuiClose
+	Menu, Tray, Add, 退出(&X), FLGuiClose
 
 	Menu, FileListBackgroundPopup, Add, 添加文件(&A)..., FileListAddFile
 	Menu, FileListBackgroundPopup, Default, 添加文件(&A)...
@@ -60,19 +72,27 @@ Main:
 	Menu, FileListPopup, Add
 	Menu, FileListPopup, Add, 属性(&P), FileListProperties
 
-	Gui, Font, s9 q5
-	Gui, Font, , MS Sans Serif
-	Gui, Font, , Arial
-	Gui, Font, , Verdana
-	Gui, Font, , Tahoma
-	Gui, Font, , Segoe UI
+	FileListGUIID := orzTechGUI("A")
+	If (FileListGUIID == 0)
+        Return
+		
+	
+	Gui, %FileListGUIID%:+LabelFLGui
+	Gui, %FileListGUIID%:Font, s9 q5
+	Gui, %FileListGUIID%:Font, , MS Sans Serif
+	Gui, %FileListGUIID%:Font, , Arial
+	Gui, %FileListGUIID%:Font, , Verdana
+	Gui, %FileListGUIID%:Font, , Tahoma
+	Gui, %FileListGUIID%:Font, , Segoe UI
 
-	Gui, Add, Listview, -ReadOnly gFileListEvent vFileList AltSubmit hwndhFileList W600 R15, 目的路径|大小|源文件
-	Gui, Add, Button, vButtonStartDistribute gStartDistribute default section, 开始分发(&S)
-	Gui, Add, Button, vButtonFileListAddFile gFileListAddFile ys, 添加文件(&A)...
-	Gui, Add, Button, vButtonFileListAddDirectory gFileListAddDirectory ys, 添加文件夹(&D)...
-	Gui, Add, Button, vButtonFileListRemove gFileListRemove ys, 删除/清空(&D)
-	Gui, Add, Button, vButtonorzTechAbout gorzTechAbout ys, 关于(&Z)...
+	Gui, %FileListGUIID%:Add, Listview, -ReadOnly gFileListEvent vFileList AltSubmit hwndhFileList W600 R15, 目的路径|大小|源文件
+	; It's something for fun
+	;GuiControl, %FileListGUIID%:+List, FileList
+	Gui, %FileListGUIID%:Add, Button, vButtonStartDistribute gStartDistribute default section, 开始分发(&S)
+	Gui, %FileListGUIID%:Add, Button, vButtonFileListAddFile gFileListAddFile ys, 添加文件(&A)...
+	Gui, %FileListGUIID%:Add, Button, vButtonFileListAddDirectory gFileListAddDirectory ys, 添加文件夹(&D)...
+	Gui, %FileListGUIID%:Add, Button, vButtonFileListRemove gFileListRemove ys, 删除/清空(&D)
+	Gui, %FileListGUIID%:Add, Button, vButtonorzTechAbout gorzTechAbout ys, 关于(&Z)...
 
 	LV_ModifyCol(1, "250")
 	LV_ModifyCol(2, "70 Float")
@@ -80,11 +100,11 @@ Main:
 
 	Gosub FileListImportFromFile
 
-	Gui, +Resize +MinSize
-	Gui, Show,, %ApplicationName% %ApplicationVersion%
-	Gui, +LastFound
-	WinGet, Gui1ID, ID
-	GroupAdd, Hotkey1, ahk_id %Gui1ID%
+	Gui, %FileListGUIID%:+Resize +MinSize
+	Gui, %FileListGUIID%:Show,, %ApplicationName%
+	Gui, %FileListGUIID%:+LastFound
+	WinGet, FileListGuiWID, ID
+	GroupAdd, FLGuiHotkey, ahk_id %FileListGuiWID%
 Return
 
 FileListEvent:
@@ -240,7 +260,6 @@ FileListOpenFolder:
 	        break
 	    LV_GetText(SourceName, RowNumber, 3)
 		
-		SourceFolderPath := RegExReplace(SourceName, "\\[^\\]{1,}\\\.{3,}", "\\$1")
 		Run, Explorer.exe /select`,"%SourceName%", , UseErrorLevel
 	    if ErrorLevel
 	    {
@@ -362,7 +381,7 @@ FileListCount(DestFileName) {
 	return CountNumber
 }
 
-GuiContextMenu:
+FLGuiContextMenu:
 	if A_GuiControl <> FileList
     	return
     If (LV_GetCount("Selected") = 0)
@@ -371,7 +390,7 @@ GuiContextMenu:
 		Menu, FileListPopup, Show, %A_GuiX%, %A_GuiY%
 return
 
-GuiDropFiles:
+FLGuiDropFiles:
 	Loop, parse, A_GuiEvent, `n
 	{
 		If (InStr(FileExist(A_LoopField), "D"))
@@ -381,8 +400,8 @@ GuiDropFiles:
 	}
 Return
 
-GuiClose:
-GuiEscape:
+FLGuiClose:
+FLGuiEscape:
 	Gosub FileListExportToFile
 	ExitApp
 Return
@@ -391,7 +410,7 @@ RunEjectAppGUI:
 	Run, eject.exe
 Return
 
-GuiSize:
+FLGuiSize:
 	Anchor("FileList", "wh")
 	Anchor("ButtonStartDistribute", "y")
 	Anchor("ButtonFileListAddFile", "y")
@@ -468,7 +487,7 @@ StartDistribute:
 		IfMsgBox, No
 			return
 	}
-	Gui, Submit
+	Gui, %FileListGUIID%:Submit
 	Menu, Tray, Icon
 	Gosub FileListExportToFile
 	;change: 增加使用提示
@@ -479,7 +498,7 @@ Return
 StopDistribute:
 	ExitWaitForNewDrive := true
 	Menu, Tray, NoIcon
-	Gui, Show
+	Gui, %FileListGUIID%:Show
 Return
 
 FileListImportFromFile:
@@ -582,10 +601,10 @@ WaitForNewDrive:
 Return
 
 orzTechAbout:
-	orzTechAbout(1)
+	orzTechAbout(FileListGUIID)
 Return
 
-#IfWinActive, ahk_group Hotkey1
+#IfWinActive, ahk_group FLGuiHotkey
 Delete::
 	GuiControl, Focus, FileList
 	Gosub FileListRemove
