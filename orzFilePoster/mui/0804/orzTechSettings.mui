@@ -1,0 +1,10 @@
+orzTechSettingsMenu=设置(&S)...
+WindowCaption=设置 %1
+ListViewHeaderFriendlyName=友好名称
+ListViewHeaderName=名称
+ListViewHeaderDataType=数据类型
+ListViewHeaderValue=值
+ButtonClose=关闭(&C)
+ButtonReset=重置(&R)
+ButtonImport=导入(&I)...
+ButtonExport=导出(&E)...

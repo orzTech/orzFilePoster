@@ -1,0 +1,10 @@
+orzTechSettingsMenu=&Settings...
+WindowCaption=Settings of %1
+ListViewHeaderFriendlyName=Friendly Name
+ListViewHeaderName=Name
+ListViewHeaderDataType=Data Type
+ListViewHeaderValue=Value
+ButtonClose=&Close
+ButtonReset=&Reset
+ButtonImport=&Import...
+ButtonExport=&Export...

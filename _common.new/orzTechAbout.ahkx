@@ -24,7 +24,11 @@ orzTechAbout(ParentGUIID=0)
 	Gui, %GUIID%:Font, Norm cDefault
 	Loop, %Author0%
 	{
-		Author := Author . Author%A_Index% . ", "
+		Author := Author . Author%A_Index%
+		If(A_Index < Author0)
+		{
+			Author := Author . ", "
+		}
 	}
 	Gui, %GUIID%:Add,Text,+BackgroundTrans xs+10 y+5 w400, %Author%
 	Gui, %GUIID%:Font, Norm cDefault
@@ -61,6 +65,7 @@ orzTechAbout(ParentGUIID=0)
 		}
 		
 		Gui, %GUIID%:Destroy
+		orzTechGUI("F", %GUIID%)
         orzTechAboutGUIhwnd := 0
 		OnMessage(0x200,"")
   		DllCall("DestroyCursor","Uint", orzTechAboutHandCurs)

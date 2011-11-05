@@ -1,18 +1,29 @@
+#NoEnv ;Recommended for performance and compatibility with future AutoHotkey releases.
 #SingleInstance off
 #NoTrayIcon
 
-;todo: 全部文件都没有更新时，弹出计时提示
 Main:
 	FileEncoding, UTF-8-RAW
 	SetFormat, float, 0.2
 	
+	/*
 	If 0<>2
 		ExitApp
+	*/
+	
+	1 = orzFIlePoster.lst
+	2 = D
 	
 	FileSizeCount = 0
 	FileSizeCount2 = 0
 	FileCount = 0
 	FileCount2 = 0
+	logPathStart = %A_ScriptDir%\orzFliePoster_drive
+	logPathEnd = .log
+	
+	IniWrite, Prepareing, %logPathStart%%2%%logPathEnd%, Status, Status
+	IniWrite, %2%, %logPathStart%%2%%logPathEnd%, Status, Drive
+	
 	Loop, read, %1%
 	{
 	    StringSplit, ImportFileName, A_LoopReadLine, %A_Tab%
@@ -26,16 +37,33 @@ Main:
 	DriveGet, DriveCapacity, capacity, %2%:
 	DriveSpaceFree, DriveFree, %2%:
 	
-	;todo: 磁盘空间不够时，判断
-	;DriveFree = 0
-	If(DriveFree < FileSizeCount)
+	if ErrorLevel
 	{
-		MsgBox, 16, %DriveLabel% (%2%:), 磁盘空间不够，请检查。
+		;Write log
+		IniWrite, Error, %logPathStart%%2%%logPathEnd%, Status, Status
+		IniWrite, noDrive, %logPathStart%%2%%logPathEnd%, Status, ErrorReason
 		Return
 	}
-	DrivePercent := DriveFree / DriveCapacity * 100
-	Progress, A T M1 FM12 FS9 0, 0`% - 0/%FileCount%, %2%: [%DriveLabel%]`n%DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb),文件分发 %2%: [%DriveLabel%],Segoe UI
 	
+	;todo: Here we should read the settings and play the wav, and close the autoplay box opened by Windows, and some more(360?)
+	
+	;Check the disk if it would be full
+	;Here DriveFree uses MB while FileSizeCount uses byte
+	If(DriveFree*1048576 < FileSizeCount)
+	{
+		IniWrite, Error, %logPathStart%%2%%logPathEnd%, Status, Status
+		IniWrite, DriveFull, %logPathStart%%2%%logPathEnd%, Status, ErrorReason
+		Return
+	}
+	
+	IniWrite, Copying, %logPathStart%%2%%logPathEnd%, Status, Status
+	IniWrite, %DriveCapacity%, %logPathStart%%2%%logPathEnd%, Status, DriveCapacity
+	IniWrite, %DriveFree%, %logPathStart%%2%%logPathEnd%, Status, DriveFree ;unstable
+	IniWrite, %FileCount%, %logPathStart%%2%%logPathEnd%, Status, FilesCount
+	IniWrite, %FileSizeCount%, %logPathStart%%2%%logPathEnd%, Status, FilesSize
+	IniWrite, 0, %logPathStart%%2%%logPathEnd%, Status, FilesFinished ;unstable
+	IniWrite, 0, %logPathStart%%2%%logPathEnd%, Status, FilesSizeFinished ;unstable
+		
 	Loop, read, %1%
 	{
 	    StringSplit, ImportFileName, A_LoopReadLine, %A_Tab%
@@ -44,18 +72,40 @@ Main:
 		
 		SplitPath, DestFile, DestName, DestDir
 		
+		IniWrite, %DestName%, %logPathStart%%2%%logPathEnd%, Status, FileName
+		IniWrite, %DestFile%, %logPathStart%%2%%logPathEnd%, Status, FileDestPath
+		
 		FileCreateDir, %DestDir%
-		FileCopy, %ImportFileName1%, %DestFile%
+		FileCopy, %ImportFileName1%, %DestFile%, 1
+		;error progress
+		if ErrorLevel
+		{
+			;todo:do sth.
+			IniWrite, Error, %logPathStart%%2%%logPathEnd%, Status, Status
+			IniWrite, noDrive, %logPathStart%%2%%logPathEnd%, Status, ErrorReason
+			Return
+		}
 		
 		FileSizeCount2 := FileSizeCount2 + FileSize
 		FileCount2 := FileCount2 + 1
 		
 		DriveSpaceFree, DriveFree, %2%:
-		DrivePercent := DriveFree / DriveCapacity * 100
-		Progress, % (FileSizeCount2 / FileSizeCount * 100), % (FileSizeCount2 / FileSizeCount * 100) . "% - " . FileCount2 . "/" . FileCount . " " . DestName, %2%: [%DriveLabel%]`n%DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb)
+		
+		IniWrite, %DriveFree%, %logPathStart%%2%%logPathEnd%, Status, DriveFree
+		IniWrite, %FileCount2%, %logPathStart%%2%%logPathEnd%, Status, FilesFinished
+		IniWrite, %FileSizeCount2%, %logPathStart%%2%%logPathEnd%, Status, FilesSizeFinished
+		IniRead, isRequestingStop, %logPathStart%%2%%logPathEnd%, Request, StopNow, 0
+		If(isRequestingStop){
+			;todo:Do sth.
+			Exit
+		}
 	}
-	Progress, Off
 	
+	IniWrite, Finished, %logPathStart%%2%%logPathEnd%, Status, Status
+	IniDelete, %logPathStart%%2%%logPathEnd%, Status, FileName
+	IniDelete, %logPathStart%%2%%logPathEnd%, Status, FileDestPath
+	
+	/*
 	Run, eject.exe /REMOVELETTER %2%
 	Sleep 1000
 	IfWinExist, eject.exe
@@ -67,3 +117,4 @@ Main:
 	{
 		MsgBox 64,, 请移除 %DriveLabel% (%2%:) %DrivePercent%`% (%DriveFree% mb / %DriveCapacity% mb)。
 	}
+	*/

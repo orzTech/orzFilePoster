@@ -20,7 +20,11 @@ orzTechAbout(ParentGUIID=0)
 	Gui, 99:Font, Norm cDefault
 	Loop, %Author0%
 	{
-		Author := Author . Author%A_Index% . ", "
+		Author := Author . Author%A_Index%
+		If (A_Index < Author0)
+		{
+			Author :=  Author . ", "
+		}
 	}
 	Gui, 99:Add,Text,+BackgroundTrans xs+10 y+5 w400, %Author%
 	Gui, 99:Font, Norm cDefault
