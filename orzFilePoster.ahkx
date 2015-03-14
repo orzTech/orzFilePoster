@@ -25,13 +25,13 @@ Main()
 
 #NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
 #SingleInstance ignore
-#Include ..\_common.new\orzTechCommon.ahkx
-#Include ..\_common.new\orzTechSettings.ahkx
-#Include ..\_common.new\orzTechLanguages.ahkx
-#Include ..\_common.new\orzTechGUI.ahkx
-#Include ..\_common.new\GUIAnchor.ahk
-#Include ..\_common.new\orzTechAbout.ahkx
-	
+#Include .\_common.new\orzTechCommon.ahkx
+#Include .\_common.new\orzTechSettings.ahkx
+#Include .\_common.new\orzTechLanguages.ahkx
+#Include .\_common.new\orzTechGUI.ahkx
+#Include .\_common.new\GUIAnchor.ahk
+#Include .\_common.new\orzTechAbout.ahkx
+
 Main:
     FileInstall, orzFilePosterCopier.exe, %A_ScriptDir%\orzFilePosterCopier.exe, 1
     FileInstall, Eject.exe, %A_ScriptDir%\Eject.exe, 1
